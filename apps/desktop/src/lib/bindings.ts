@@ -23,6 +23,42 @@ async ping() : Promise<Result<string, AppError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Inspect local hardware + runtime capabilities (FR-ONB-001, contract §9.1).
+ * 
+ * Purely local: hardware probing via `sysinfo`, no network access. The app-data volume
+ * is used for free-disk reporting so the number reflects where models/indexes will live.
+ */
+async systemInspect() : Promise<Result<SystemInspection, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("system_inspect") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Read settings: one entry when `key` is given, otherwise all entries (contract §9).
+ */
+async settingsGet(key: string | null) : Promise<Result<SettingEntry[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("settings_get", { key }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Write a single setting; `value` is stored as JSON text (contract §9, FR-SET-*).
+ */
+async settingsSet(key: string, value: JsonValue) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("settings_set", { key, value }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -98,7 +134,48 @@ export type AppErrorCode =
  * An unexpected internal error (bug / unhandled condition).
  */
 "INTERNAL"
+/**
+ * A detected GPU (or accelerator). `vram_bytes` is `None` on unified-memory systems.
+ */
+export type Gpu = { name: string; backend: GpuBackend; vramBytes: number | null }
+/**
+ * GPU / compute backend family.
+ */
+export type GpuBackend = "metal" | "cuda" | "vulkan" | "cpu"
+/**
+ * Local hardware snapshot (contract §8.1). Numeric fields are `None` when undetectable.
+ */
+export type HardwareInfo = { os: string; arch: string; cpuModel: string | null; logicalCores: number | null; totalMemoryBytes: number | null; availableMemoryBytes: number | null; gpus: Gpu[]; availableDiskBytes: number | null; 
+/**
+ * Names of fields that could not be detected on this system (FR-ONB-001).
+ */
+undetected: string[] }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+/**
+ * Capabilities of the active inference runtime (spec §12.2; contract §8.1).
+ */
+export type RuntimeCapabilities = { engine: RuntimeEngine; 
+/**
+ * Detected runtime version, or [`ENGINE_VERSION_UNAVAILABLE`] when not installed.
+ */
+engineVersion: string; supportsSeed: boolean; supportsGpuOffload: boolean; supportsEmbeddings: boolean; deterministicSampling: boolean; 
+/**
+ * Maximum context the runtime advertises, when known.
+ */
+maxContext: number | null }
+/**
+ * Inference engine identifier. Ollama is a post-MVP (P1) adapter.
+ */
+export type RuntimeEngine = "llama.cpp" | "ollama"
+/**
+ * A single `app_settings` entry exposed to the UI. `value` is the parsed JSON so the
+ * frontend receives a real bool/string/number/object rather than a JSON string (§9).
+ */
+export type SettingEntry = { key: string; value: JsonValue }
+/**
+ * Combined hardware + runtime snapshot returned by `system.inspect` (contract §9.1).
+ */
+export type SystemInspection = { hardware: HardwareInfo; capabilities: RuntimeCapabilities }
 
 /** tauri-specta globals **/
 
