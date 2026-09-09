@@ -2,9 +2,16 @@
 //! migrations, and launches the window. Domain logic lives in `app-core`/`crates/*`;
 //! this crate only adapts them to Tauri (PROJECT_REQUIREMENTS.md §6, §8).
 
+use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
-use app_core::{inspect, AppError, AppErrorCode, AppResult, SystemInspection, APP_VERSION};
+use app_core::{
+    detect_hardware, estimate_compatibility, get_runtime_profile, import_model, inspect,
+    list_models, recommended_runtime_profile, remove_model, update_runtime_profile, AppError,
+    AppErrorCode, AppResult, CompatibilityAssessment, HardwareInfo, ModelImportResult, ModelRow,
+    RemoveResult, RuntimeProfile, StorageMode, SystemInspection, APP_VERSION,
+};
+use inference::detect_capabilities;
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use storage::Database;
@@ -102,6 +109,110 @@ fn settings_set(db: State<'_, Db>, key: String, value: serde_json::Value) -> App
     Ok(())
 }
 
+/// Detect current hardware, probing the app-data volume for free disk space.
+fn app_hardware(app: &tauri::AppHandle) -> HardwareInfo {
+    let probe = app.path().app_data_dir().ok();
+    detect_hardware(probe.as_deref())
+}
+
+/// The directory holding app-managed (copied) model files.
+fn managed_models_dir(app: &tauri::AppHandle) -> AppResult<PathBuf> {
+    let dir = app
+        .path()
+        .app_data_dir()
+        .map_err(|e| AppError::internal(format!("could not resolve app-data directory: {e}")))?;
+    Ok(dir.join("models"))
+}
+
+/// Import a GGUF model file (FR-MOD-001, contract §9.2). Validates, checksums, de-duplicates,
+/// and registers the model with a hardware-derived default runtime profile.
+#[tauri::command]
+#[specta::specta]
+fn models_import(
+    app: tauri::AppHandle,
+    db: State<'_, Db>,
+    source_path: String,
+    storage_mode: StorageMode,
+) -> AppResult<ModelImportResult> {
+    let hardware = app_hardware(&app);
+    let capabilities = detect_capabilities();
+    let models_dir = managed_models_dir(&app)?;
+    let db = lock_db(&db)?;
+    import_model(
+        &db,
+        &models_dir,
+        Path::new(&source_path),
+        storage_mode,
+        &hardware,
+        &capabilities,
+    )
+}
+
+/// List the model library with per-model compatibility badges (FR-MOD-002, contract §9.2).
+#[tauri::command]
+#[specta::specta]
+fn models_list(app: tauri::AppHandle, db: State<'_, Db>) -> AppResult<Vec<ModelRow>> {
+    let available_memory = app_hardware(&app).available_memory_bytes;
+    let db = lock_db(&db)?;
+    list_models(&db, available_memory)
+}
+
+/// Preflight a model + runtime profile against current memory (FR-ONB-002, contract §9.2).
+#[tauri::command]
+#[specta::specta]
+fn models_estimate_compatibility(
+    app: tauri::AppHandle,
+    db: State<'_, Db>,
+    model_id: String,
+    profile: RuntimeProfile,
+) -> AppResult<CompatibilityAssessment> {
+    let available_memory = app_hardware(&app).available_memory_bytes;
+    let db = lock_db(&db)?;
+    estimate_compatibility(&db, &model_id, &profile, available_memory)
+}
+
+/// Read a model's default runtime profile (backs the FR-MOD-003 editor).
+#[tauri::command]
+#[specta::specta]
+fn models_get_runtime_profile(db: State<'_, Db>, model_id: String) -> AppResult<RuntimeProfile> {
+    let db = lock_db(&db)?;
+    get_runtime_profile(&db, &model_id)
+}
+
+/// Persist edits to a runtime profile (FR-MOD-003, contract §9.2).
+#[tauri::command]
+#[specta::specta]
+fn models_update_runtime_profile(
+    db: State<'_, Db>,
+    profile: RuntimeProfile,
+) -> AppResult<RuntimeProfile> {
+    let db = lock_db(&db)?;
+    update_runtime_profile(&db, &profile)
+}
+
+/// Compute a hardware-derived recommended runtime profile (FR-MOD-003 "Reset to Recommended").
+#[tauri::command]
+#[specta::specta]
+fn models_recommended_runtime_profile(
+    app: tauri::AppHandle,
+    db: State<'_, Db>,
+    model_id: String,
+) -> AppResult<RuntimeProfile> {
+    let hardware = app_hardware(&app);
+    let capabilities = detect_capabilities();
+    let db = lock_db(&db)?;
+    recommended_runtime_profile(&db, &model_id, &hardware, &capabilities)
+}
+
+/// Remove a model (FR-MOD-006, contract §9.2). Managed copies are deleted; referenced source
+/// files are never touched.
+#[tauri::command]
+#[specta::specta]
+fn models_remove(db: State<'_, Db>, model_id: String) -> AppResult<RemoveResult> {
+    let db = lock_db(&db)?;
+    remove_model(&db, &model_id)
+}
+
 /// Build the tauri-specta command/event registry (single source of truth for bindings).
 fn specta_builder() -> Builder {
     Builder::<tauri::Wry>::new().commands(collect_commands![
@@ -109,7 +220,14 @@ fn specta_builder() -> Builder {
         ping,
         system_inspect,
         settings_get,
-        settings_set
+        settings_set,
+        models_import,
+        models_list,
+        models_estimate_compatibility,
+        models_get_runtime_profile,
+        models_update_runtime_profile,
+        models_recommended_runtime_profile,
+        models_remove
     ])
 }
 
@@ -162,6 +280,7 @@ pub fn run() {
     let builder = specta_builder();
 
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
         .setup(|app| {
             let db = initialize_database(app)?;

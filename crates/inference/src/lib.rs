@@ -6,8 +6,10 @@
 //! (FR-SYS-001).
 
 pub mod capabilities;
+pub mod gguf;
 
 pub use capabilities::{detect_capabilities, RuntimeCapabilities, RuntimeEngine};
+pub use gguf::{compute_sha256, inspect_model, GgufError, ModelFormat, ModelMetadata};
 
 /// Crate name, exposed for diagnostics/version surfaces.
 pub const CRATE_NAME: &str = "inference";
