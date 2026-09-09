@@ -17,6 +17,8 @@ serde_json = { workspace = true }
 specta = { workspace = true }
 thiserror = { workspace = true }
 sysinfo = { workspace = true }
+uuid = { workspace = true }
 
 [dev-dependencies]
 serde_json = { workspace = true }
+tempfile = "3"

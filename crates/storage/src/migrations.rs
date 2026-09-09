@@ -33,6 +33,11 @@ const MIGRATIONS: &[Migration] = &[
         name: "app_settings",
         sql: include_str!("../migrations/0002_app_settings.sql"),
     },
+    Migration {
+        version: 3,
+        name: "models",
+        sql: include_str!("../migrations/0003_models.sql"),
+    },
 ];
 
 /// Summary of a migration run.

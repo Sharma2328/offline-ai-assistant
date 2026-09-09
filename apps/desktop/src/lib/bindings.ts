@@ -59,6 +59,85 @@ async settingsSet(key: string, value: JsonValue) : Promise<Result<null, AppError
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Import a GGUF model file (FR-MOD-001, contract §9.2). Validates, checksums, de-duplicates,
+ * and registers the model with a hardware-derived default runtime profile.
+ */
+async modelsImport(sourcePath: string, storageMode: StorageMode) : Promise<Result<ModelImportResult, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_import", { sourcePath, storageMode }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * List the model library with per-model compatibility badges (FR-MOD-002, contract §9.2).
+ */
+async modelsList() : Promise<Result<ModelRow[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_list") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Preflight a model + runtime profile against current memory (FR-ONB-002, contract §9.2).
+ */
+async modelsEstimateCompatibility(modelId: string, profile: RuntimeProfile) : Promise<Result<CompatibilityAssessment, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_estimate_compatibility", { modelId, profile }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Read a model's default runtime profile (backs the FR-MOD-003 editor).
+ */
+async modelsGetRuntimeProfile(modelId: string) : Promise<Result<RuntimeProfile, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_get_runtime_profile", { modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Persist edits to a runtime profile (FR-MOD-003, contract §9.2).
+ */
+async modelsUpdateRuntimeProfile(profile: RuntimeProfile) : Promise<Result<RuntimeProfile, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_update_runtime_profile", { profile }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Compute a hardware-derived recommended runtime profile (FR-MOD-003 "Reset to Recommended").
+ */
+async modelsRecommendedRuntimeProfile(modelId: string) : Promise<Result<RuntimeProfile, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_recommended_runtime_profile", { modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Remove a model (FR-MOD-006, contract §9.2). Managed copies are deleted; referenced source
+ * files are never touched.
+ */
+async modelsRemove(modelId: string) : Promise<Result<RemoveResult, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_remove", { modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
@@ -135,6 +214,26 @@ export type AppErrorCode =
  */
 "INTERNAL"
 /**
+ * Result of a preflight estimate for a model + context length against current hardware.
+ */
+export type CompatibilityAssessment = { status: CompatibilityStatus; estimatedMemoryBytes: number; 
+/**
+ * Available memory used for the estimate, or `0` when memory could not be detected.
+ */
+availableMemoryBytes: number; 
+/**
+ * Plain-language reasons (never conveyed by color alone, FR-ONB-002).
+ */
+reasons: string[]; 
+/**
+ * `true` → the configuration is invalid and loading must be disabled.
+ */
+blocking: boolean }
+/**
+ * Three-way compatibility class (contract §8.1).
+ */
+export type CompatibilityStatus = "recommended" | "may_be_slow" | "not_recommended"
+/**
  * A detected GPU (or accelerator). `vram_bytes` is `None` on unified-memory systems.
  */
 export type Gpu = { name: string; backend: GpuBackend; vramBytes: number | null }
@@ -150,7 +249,31 @@ export type HardwareInfo = { os: string; arch: string; cpuModel: string | null; 
  * Names of fields that could not be detected on this system (FR-ONB-001).
  */
 undetected: string[] }
+/**
+ * `ModelMetadata & { id }` — the import response payload (contract §9.2).
+ */
+export type ImportedModel = { id: string; format: ModelFormat; architecture: string | null; parameterCount: number | null; quantization: string | null; contextLengthMax: number | null; sizeBytes: number; sha256: string; raw: Partial<{ [key in string]: string }> }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
+/**
+ * Model container format. Only GGUF is supported in the MVP (P1: extra formats).
+ */
+export type ModelFormat = "gguf"
+/**
+ * Result of `models.import`. `deduplicated` is `true` when the file's checksum already
+ * existed in the library — no new copy was made and `model` refers to the existing entry
+ * (FR-MOD-001d: "detected and de-duplicated with a prompt").
+ */
+export type ModelImportResult = { model: ImportedModel; deduplicated: boolean }
+/**
+ * A library row (FR-MOD-002); returned by `models.list`.
+ */
+export type ModelRow = { id: string; name: string; fileUri: string; storageMode: StorageMode; sizeBytes: number; sha256: string; architecture: string | null; quantization: string | null; lastUsedAt: string | null; compatibility: CompatibilityAssessment | null }
+/**
+ * Result of `models.remove` (contract §9.2). `source_file_affected` is `true` only when a
+ * file was deleted from disk — which happens for **managed** copies, never for referenced
+ * source files (FR-MOD-006).
+ */
+export type RemoveResult = { ok: boolean; sourceFileAffected: boolean }
 /**
  * Capabilities of the active inference runtime (spec §12.2; contract §8.1).
  */
@@ -168,10 +291,19 @@ maxContext: number | null }
  */
 export type RuntimeEngine = "llama.cpp" | "ollama"
 /**
+ * A per-model runtime binding (contract §8.1). The generation-sampling fields are packed
+ * into `runtime_profiles.generation_defaults_json`; the rest are dedicated columns.
+ */
+export type RuntimeProfile = { id: string; modelId: string; engine: RuntimeEngine; contextLength: number; maxTokens: number; temperature: number; topP: number; topK: number; repeatPenalty: number; seed: number | null; threads: number; batchSize: number; gpuLayers: number }
+/**
  * A single `app_settings` entry exposed to the UI. `value` is the parsed JSON so the
  * frontend receives a real bool/string/number/object rather than a JSON string (§9).
  */
 export type SettingEntry = { key: string; value: JsonValue }
+/**
+ * Where a model's bytes live: referenced in place (default) or copied into app storage.
+ */
+export type StorageMode = "reference" | "managed"
 /**
  * Combined hardware + runtime snapshot returned by `system.inspect` (contract §9.1).
  */

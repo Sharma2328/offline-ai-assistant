@@ -10,9 +10,13 @@ use rusqlite::Connection;
 use thiserror::Error;
 
 pub mod migrations;
+pub mod models;
 pub mod settings;
 
 pub use migrations::{current_version, MigrationReport};
+pub use models::{
+    ModelRecord, ModelsRepository, NewModel, NewRuntimeProfile, ProfileUpdate, RuntimeProfileRecord,
+};
 pub use settings::SettingsRepository;
 
 /// Errors surfaced by the storage layer.
@@ -66,6 +70,11 @@ impl Database {
         SettingsRepository::new(&self.conn)
     }
 
+    /// A models repository bound to this database's connection.
+    pub fn models(&self) -> ModelsRepository<'_> {
+        ModelsRepository::new(&self.conn)
+    }
+
     /// Whether foreign-key enforcement is currently on.
     pub fn foreign_keys_enabled(&self) -> Result<bool, StorageError> {
         let enabled: bool = self
@@ -99,14 +108,14 @@ mod tests {
         assert_eq!(db.schema_version().unwrap(), 0);
 
         let first = db.migrate().unwrap();
-        assert_eq!(first.applied, vec![1, 2]);
-        assert_eq!(first.current_version, 2);
-        assert_eq!(db.schema_version().unwrap(), 2);
+        assert_eq!(first.applied, vec![1, 2, 3]);
+        assert_eq!(first.current_version, 3);
+        assert_eq!(db.schema_version().unwrap(), 3);
 
         // Running again applies nothing (forward-only, idempotent).
         let second = db.migrate().unwrap();
         assert!(second.applied.is_empty());
-        assert_eq!(second.current_version, 2);
+        assert_eq!(second.current_version, 3);
     }
 
     #[test]
@@ -117,12 +126,12 @@ mod tests {
         {
             let mut db = Database::open(&path).unwrap();
             let report = db.migrate().unwrap();
-            assert_eq!(report.current_version, 2);
+            assert_eq!(report.current_version, 3);
         }
 
         // Reopen: schema version is remembered; migrating again is a no-op.
         let mut reopened = Database::open(&path).unwrap();
-        assert_eq!(reopened.schema_version().unwrap(), 2);
+        assert_eq!(reopened.schema_version().unwrap(), 3);
         assert!(reopened.migrate().unwrap().applied.is_empty());
     }
 
