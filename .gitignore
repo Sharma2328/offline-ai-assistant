@@ -1,0 +1,50 @@
+# Node
+node_modules/
+.pnpm-store/
+dist/
+dist-ssr/
+*.local
+
+# Vite / build output
+apps/desktop/dist/
+apps/desktop/.vite/
+
+# Rust / Cargo
+target/
+**/*.rs.bk
+Cargo.lock.orig
+
+# Tauri
+apps/desktop/src-tauri/target/
+apps/desktop/src-tauri/gen/
+
+# Model binaries & large runtime assets (never committed)
+apps/desktop/src-tauri/binaries/*
+!apps/desktop/src-tauri/binaries/.gitkeep
+*.gguf
+*.bin
+*.safetensors
+
+# Local databases & app data
+*.sqlite
+*.sqlite-shm
+*.sqlite-wal
+*.db
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+Thumbs.db
+
+# Logs & coverage
+*.log
+coverage/
+.nyc_output/
+
+# Env
+.env
+.env.*
+!.env.example
