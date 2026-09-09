@@ -84,7 +84,7 @@ Training/fine-tuning; cloud-hosted inference; team collaboration/shared workspac
 - **A1 — Platform:** MVP ships macOS/Apple Silicon only; other OSes are post-MVP but no interface is macOS-specific.
 - **A2 — Model source:** users supply their own GGUF files (local import); no model download catalog in MVP.
 - **A3 — Ollama:** P1 adapter, not required for MVP.
-- **A4 — Embedding model:** a small permissively-licensed embedding model (e.g. `bge-small-en-v1.5`, MIT, or `nomic-embed-text-v1.5`, Apache-2.0) is bundled or imported for RAG; final choice pending license sign-off (spec §24.3).
+- **A4 — Embedding model:** **`bge-small-en-v1.5` (MIT)** — ~130 MB, 384-dim, 512-token context — is the default RAG embedding model, run via llama.cpp embedding mode (D3 resolved; spec §24.3).
 - **A5 — Built-in datasets:** small **original**, permissively-licensed suites are authored in-repo to avoid licensing/contamination risk (spec §22, §24.4).
 - **A6 — Vector search:** brute-force cosine over persisted vectors (or `sqlite-vec`) is sufficient for MVP corpus sizes; ANN/HNSW is post-MVP.
 - **A7 — Custom datasets:** JSONL import is P1 (spec §8).
@@ -1506,8 +1506,8 @@ Coverage target: **≥80%** on domain crates + feature services (business logic)
 | R8 | Large model distribution / licensing | Med | Med | Local import only for MVP (A2); show license metadata where available |
 | R9 | RAG hallucination | Med | Med | Require citations, expose excerpts, measure retrieval quality (FR-RAG-003, retrieval suite) |
 | R10 | Cross-platform runtime packaging | Med | Med | macOS-first (A1); adapter + supervisor abstract the binary; packaging scaffolded (Phase 13) |
-| R11 | Embedding-model licensing | Low | Med | Pick permissive model; confirm license before bundling (A4, open decision D3) |
-| R12 | Dataset licensing | Med | Med | Author original suites; store license metadata (A5, open decision D4) |
+| R11 | Embedding-model licensing | Low | Med | Resolved: `bge-small-en-v1.5` (MIT); ship license file with the model (A4, D3) |
+| R12 | Dataset licensing | Med | Med | Resolved: author original suites; store license metadata (A5, D4) |
 | R13 | Type drift between Rust/TS | Low | Med | Generated bindings + CI drift check (§8.6) |
 | R14 | VRAM/thermal readings unavailable on some HW | Low | Med | Mark metrics unavailable + redistribute weight with disclosure (§10.9) |
 
@@ -1517,11 +1517,11 @@ Coverage target: **≥80%** on domain crates + feature services (business logic)
 | --- | --- | --- |
 | D1 | First-release platform | **Resolved:** macOS Apple Silicon first (this session). |
 | D2 | Model reference vs copy default | **Resolved:** reference in place; copy offered (this session). |
-| D3 | Embedding model + license | **Open:** recommend `bge-small-en-v1.5` (MIT) or `nomic-embed-text-v1.5` (Apache-2.0); needs sign-off (A4). |
-| D4 | Built-in datasets + licenses | **Open:** recommend original, permissively-licensed suites; needs approval of set + licenses (A5). |
+| D3 | Embedding model + license | **Resolved:** `bge-small-en-v1.5` (MIT) — ~130 MB, 384-dim, 512-token context, run via llama.cpp embedding mode (A4). |
+| D4 | Built-in datasets + licenses | **Resolved:** author small **original**, permissively-licensed suites (no redistribution → no license/contamination risk); user-supplied import path deferred to P1 (A5). |
 | D5 | Code benchmarks in MVP | **Resolved:** included via restricted runner (this session); fallback to non-exec scorers if Phase 9 reliability is at risk (R7). |
 | D6 | Fixed vs preset score weights | **Resolved:** presets (Quality/Balanced/Speed), default Balanced (this session). |
-| D7 | Ollama in MVP | **Open (recommended P1):** MVP ships llama.cpp only; Ollama adapter deferred (A3). |
+| D7 | Ollama in MVP | **Resolved (P1):** MVP ships llama.cpp only behind the common adapter; Ollama adapter deferred to post-MVP (A3). |
 
 ### 15.3 Features recommended for deferral from MVP (P1/P2)
 
