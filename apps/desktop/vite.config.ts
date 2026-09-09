@@ -11,6 +11,9 @@ export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
+      // The shared design system is consumed from source so Vite transforms its
+      // TSX with the app's pipeline (no separate build step in dev).
+      "@offline-ai/ui": fileURLToPath(new URL("../../packages/ui/src/index.ts", import.meta.url)),
       "@": fileURLToPath(new URL("./src", import.meta.url)),
       "@app": fileURLToPath(new URL("./src/app", import.meta.url)),
       "@features": fileURLToPath(new URL("./src/features", import.meta.url)),

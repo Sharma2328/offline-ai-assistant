@@ -54,7 +54,14 @@
     @apply bg-background text-foreground;
   }
 
-  /* Respect the OS/user reduced-motion preference (FR-SET-004, Phase 2). */
+  /* Visible focus ring for keyboard navigation (NFR-A11Y-004). */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Reduced-motion, driven either by the OS preference or the in-app setting
+     (FR-SET-004). The `.reduce-motion` class is toggled on <html> by the theme
+     store when the user opts in or the OS requests it. */
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
@@ -64,5 +71,24 @@
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
+  }
+
+  .reduce-motion *,
+  .reduce-motion *::before,
+  .reduce-motion *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@layer components {
+  /* Skip-to-content link: visually hidden until focused (keyboard-first nav). */
+  .skip-link {
+    @apply sr-only;
+  }
+  .skip-link:focus {
+    @apply not-sr-only fixed left-4 top-4 z-50 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg;
   }
 }

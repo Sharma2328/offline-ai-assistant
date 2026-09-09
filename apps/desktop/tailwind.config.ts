@@ -4,7 +4,12 @@ import animate from "tailwindcss-animate";
 // shadcn/ui-compatible token setup (design tokens live as CSS variables in globals.css).
 const config: Config = {
   darkMode: ["class"],
-  content: ["./index.html", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./index.html",
+    "./src/**/*.{ts,tsx}",
+    // Include the shared design system so its utility classes are not purged.
+    "../../packages/ui/src/**/*.{ts,tsx}",
+  ],
   theme: {
     container: {
       center: true,
