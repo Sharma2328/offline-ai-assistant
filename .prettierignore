@@ -1,0 +1,8 @@
+node_modules
+dist
+target
+pnpm-lock.yaml
+# Authored long-form spec/plan; keep as written (not machine-formatted).
+PROJECT_REQUIREMENTS.md
+# Generated from Rust — do not hand-edit; formatting owned by the generator
+apps/desktop/src/lib/bindings.ts

@@ -1,0 +1,29 @@
+[package]
+name = "offline-ai-assistant"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish.workspace = true
+description = "Offline AI Assistant — Tauri host (desktop shell)."
+
+[lints]
+workspace = true
+
+[lib]
+name = "offline_ai_assistant_lib"
+crate-type = ["lib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+app-core = { workspace = true }
+storage = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+tauri = { version = "2", features = [] }
+specta = { workspace = true }
+specta-typescript = "0.0.9"
+tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
+tracing = { workspace = true }

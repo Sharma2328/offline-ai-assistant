@@ -1,0 +1,9 @@
+{
+  "name": "@offline-ai/contracts",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "description": "Single TS view of shared types: generated-from-Rust bindings plus hand-written UI-only types."
+}

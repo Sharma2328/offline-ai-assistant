@@ -1,0 +1,7 @@
+{
+  "name": "@offline-ai/benchmark-suites",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Versioned built-in benchmark datasets with license metadata + checksums. Populated in Phase 8."
+}

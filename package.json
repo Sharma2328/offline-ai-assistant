@@ -1,0 +1,39 @@
+{
+  "name": "offline-ai-assistant",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Offline AI Assistant with a Local Model Benchmarking System (local-first Tauri v2 desktop app).",
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.26.2",
+  "engines": {
+    "node": ">=20",
+    "pnpm": ">=10"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @offline-ai/desktop dev",
+    "build": "pnpm --filter @offline-ai/desktop build",
+    "tauri": "pnpm --filter @offline-ai/desktop tauri",
+    "lint": "eslint . --max-warnings=0",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "typecheck": "pnpm -r --if-present typecheck",
+    "test": "pnpm -r --if-present test",
+    "generate:bindings": "node scripts/generate-bindings.mjs",
+    "check:bindings": "node scripts/generate-bindings.mjs --check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.18.0",
+    "@typescript-eslint/eslint-plugin": "^8.20.0",
+    "@typescript-eslint/parser": "^8.20.0",
+    "eslint": "^9.18.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-react": "^7.37.4",
+    "eslint-plugin-react-hooks": "^5.1.0",
+    "globals": "^15.14.0",
+    "prettier": "^3.4.2",
+    "typescript": "^5.7.3",
+    "typescript-eslint": "^8.20.0"
+  }
+}
