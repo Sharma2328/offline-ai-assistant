@@ -1,8 +1,20 @@
 import type { ReactElement } from "react";
-import { Button, Card, CardContent, CardDescription, CardHeader, CardTitle } from "@offline-ai/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  ErrorState,
+} from "@offline-ai/ui";
 
 import type { ThemePreference } from "@app/theme/theme";
 import { useThemeStore } from "@app/theme/theme-store";
+import { HardwareSummary } from "@features/system/HardwareSummary";
+import { useSystemInspection } from "@features/system/useSystemInspection";
+import { SETTING_KEYS } from "./settings-service";
+import { useOfflineLock, useSetBooleanSetting } from "./useSettings";
 
 const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
   { value: "light", label: "Light" },
@@ -11,9 +23,9 @@ const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
 ];
 
 /**
- * Settings screen (doc §4). Appearance controls are wired in Phase 2; storage, offline
- * lock, and diagnostics settings follow in later phases. The component only binds to the
- * theme store — preference logic lives in the store/module (doc §5.2).
+ * Settings screen (doc §4). Appearance is wired in Phase 2; Phase 3 adds the hardware /
+ * runtime snapshot and the offline lock. The component only binds to feature hooks and the
+ * theme store — all detection, persistence, and preference logic lives outside it (doc §5/§8).
  */
 export function SettingsPage(): ReactElement {
   const theme = useThemeStore((s) => s.theme);
@@ -23,8 +35,8 @@ export function SettingsPage(): ReactElement {
   const reduceMotion = motion === "reduce";
 
   return (
-    <section aria-labelledby="settings-heading" className="mx-auto w-full max-w-2xl p-8">
-      <h1 id="settings-heading" className="mb-6 text-2xl font-semibold tracking-tight">
+    <section aria-labelledby="settings-heading" className="mx-auto w-full max-w-2xl space-y-6 p-8">
+      <h1 id="settings-heading" className="text-2xl font-semibold tracking-tight">
         Settings
       </h1>
 
@@ -79,6 +91,109 @@ export function SettingsPage(): ReactElement {
           </div>
         </CardContent>
       </Card>
+
+      <OfflineLockCard />
+      <HardwareCard />
     </section>
+  );
+}
+
+/** Privacy / offline lock control (FR-SET-003). Default-on; turning it off is discouraged. */
+function OfflineLockCard(): ReactElement {
+  const { data: locked, isLoading } = useOfflineLock();
+  const setLock = useSetBooleanSetting();
+  // Optimistic display: the pending target if a write is in flight, else the loaded value.
+  const enabled = setLock.isPending ? setLock.variables.value : (locked ?? true);
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Privacy</CardTitle>
+        <CardDescription>Control whether the app may use the network.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <div className="text-sm font-medium">Offline lock</div>
+            <p className="text-sm text-muted-foreground">
+              When on, the app makes no network connections. Recommended (FR-SET-003).
+            </p>
+          </div>
+          <Button
+            type="button"
+            variant={enabled ? "default" : "outline"}
+            size="sm"
+            role="switch"
+            aria-label="Offline lock"
+            aria-checked={enabled}
+            disabled={isLoading || setLock.isPending}
+            onClick={() => {
+              setLock.mutate({ key: SETTING_KEYS.offlineLock, value: !enabled });
+            }}
+          >
+            {enabled ? "On" : "Off"}
+          </Button>
+        </div>
+
+        {!enabled ? (
+          <p role="status" className="text-sm text-amber-600 dark:text-amber-500">
+            The offline lock is off. This app is designed to run fully offline; leave it on unless
+            you have a specific reason to allow network access.
+          </p>
+        ) : null}
+
+        {setLock.isError ? (
+          <p role="alert" className="text-sm text-destructive">
+            Could not update the offline lock: {setLock.error.message}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+/** Hardware & runtime snapshot with an explicit re-scan (FR-ONB-001, FR-SYS-001). */
+function HardwareCard(): ReactElement {
+  const { data, isLoading, isError, error, refetch, isFetching } = useSystemInspection();
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Hardware &amp; runtime</CardTitle>
+        <CardDescription>Detected locally to estimate model compatibility.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {isLoading ? (
+          <p role="status" className="text-sm text-muted-foreground">
+            Inspecting your hardware…
+          </p>
+        ) : isError ? (
+          <ErrorState
+            title="Couldn't inspect hardware"
+            message={error.message}
+            recovery={error.recovery}
+            code={error.code}
+          />
+        ) : data ? (
+          <HardwareSummary inspection={data} />
+        ) : (
+          <p role="status" className="text-sm text-muted-foreground">
+            No hardware information available.
+          </p>
+        )}
+
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          disabled={isFetching}
+          onClick={() => {
+            void refetch();
+          }}
+        >
+          {isFetching ? "Scanning…" : "Re-scan hardware"}
+        </Button>
+      </CardContent>
+    </Card>
   );
 }

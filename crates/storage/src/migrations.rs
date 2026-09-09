@@ -22,11 +22,18 @@ struct Migration {
 
 /// The ordered set of embedded migrations. Add new entries with strictly increasing
 /// versions; never edit the SQL of an already-shipped migration (checksums are enforced).
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    name: "init",
-    sql: include_str!("../migrations/0001_init.sql"),
-}];
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        name: "init",
+        sql: include_str!("../migrations/0001_init.sql"),
+    },
+    Migration {
+        version: 2,
+        name: "app_settings",
+        sql: include_str!("../migrations/0002_app_settings.sql"),
+    },
+];
 
 /// Summary of a migration run.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -48,7 +55,7 @@ fn checksum(sql: &str) -> String {
     out
 }
 
-fn now_iso8601() -> String {
+pub(crate) fn now_iso8601() -> String {
     OffsetDateTime::now_utc()
         .format(&Rfc3339)
         .unwrap_or_else(|_| "1970-01-01T00:00:00Z".to_string())
