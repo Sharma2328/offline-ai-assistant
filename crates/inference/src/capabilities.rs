@@ -1,9 +1,5 @@
 //! Runtime capability reporting (FR-SYS-001).
-//!
-//! The generation runtime (llama.cpp) runs out-of-process and is integrated in Phase 5.
-//! Until a runtime binary is present we still report the *shape* of what the llama.cpp
-//! adapter will support, but mark `engine_version` as unavailable so the UI can show a
-//! "runtime not installed" notice and degrade gracefully (FR-SYS-001 acceptance (c)).
+//! Reports the installed runtime without loading a model.
 
 use serde::{Deserialize, Serialize};
 use specta::Type;
@@ -12,7 +8,7 @@ use specta::Type;
 pub const ENGINE_VERSION_UNAVAILABLE: &str = "unavailable";
 
 /// Inference engine identifier. Ollama is a post-MVP (P1) adapter.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type, schemars::JsonSchema)]
 #[serde(rename_all = "lowercase")]
 pub enum RuntimeEngine {
     #[serde(rename = "llama.cpp")]
@@ -21,7 +17,7 @@ pub enum RuntimeEngine {
 }
 
 /// Capabilities of the active inference runtime (spec §12.2; contract §8.1).
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Type, schemars::JsonSchema)]
 #[serde(rename_all = "camelCase")]
 pub struct RuntimeCapabilities {
     pub engine: RuntimeEngine,
@@ -42,15 +38,25 @@ impl RuntimeCapabilities {
     }
 }
 
-/// Report the capabilities of the default (llama.cpp) runtime.
-///
-/// Phase 3 has no bundled runtime binary, so this reports the llama.cpp adapter's declared
-/// capabilities with an `unavailable` version. Phase 5 replaces the version probe with an
-/// actual handshake against the spawned runtime process.
+/// Identify bundled releases from their adjacent build manifest.
+pub fn binary_version(binary: &std::path::Path) -> String {
+    binary
+        .parent()
+        .and_then(std::path::Path::parent)
+        .and_then(|root| std::fs::read(root.join("manifest.json")).ok())
+        .and_then(|bytes| serde_json::from_slice::<serde_json::Value>(&bytes).ok())
+        .and_then(|manifest| manifest["version"].as_str().map(str::to_owned))
+        .unwrap_or_else(|| "custom (version unreported)".into())
+}
+
+/// Report installed llama.cpp capabilities; a model handshake adds context limits.
 pub fn detect_capabilities() -> RuntimeCapabilities {
     RuntimeCapabilities {
         engine: RuntimeEngine::LlamaCpp,
-        engine_version: ENGINE_VERSION_UNAVAILABLE.to_string(),
+        engine_version: crate::llama::resolve_llama_binary(None)
+            .as_deref()
+            .map(binary_version)
+            .unwrap_or_else(|| ENGINE_VERSION_UNAVAILABLE.to_string()),
         supports_seed: true,
         supports_gpu_offload: true,
         supports_embeddings: true,
@@ -64,10 +70,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn default_runtime_is_llama_cpp_and_currently_unavailable() {
+    fn runtime_availability_matches_discovery() {
         let caps = detect_capabilities();
         assert_eq!(caps.engine, RuntimeEngine::LlamaCpp);
-        assert!(!caps.is_available());
+        assert_eq!(
+            caps.is_available(),
+            crate::llama::resolve_llama_binary(None).is_some()
+        );
     }
 
     #[test]

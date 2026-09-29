@@ -10,6 +10,22 @@ publish.workspace = true
 workspace = true
 
 [dependencies]
+jsonschema = { version = "0.33", default-features = false }
+schemars = "0.8"
+regex = "1"
+sysinfo = { workspace = true }
 serde = { workspace = true }
 specta = { workspace = true }
 thiserror = { workspace = true }
+serde_json = { workspace = true }
+inference = { workspace = true }
+rusqlite = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+sha2 = "0.10"
+tempfile = "3"
+
+[dev-dependencies]
+app-core = { workspace = true }
+storage = { workspace = true }
+documents = { path = "../documents" }

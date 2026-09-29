@@ -48,3 +48,8 @@ coverage/
 .env
 .env.*
 !.env.example
+
+# Provisioned runtime and browser artifacts
+apps/desktop/src-tauri/runtime/
+playwright-report/
+test-results/

@@ -92,3 +92,48 @@
     @apply not-sr-only fixed left-4 top-4 z-50 rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg;
   }
 }
+
+@layer components {
+  .markdown {
+    @apply text-sm leading-7;
+  }
+  .markdown > * + * {
+    @apply mt-3;
+  }
+  .markdown h1,
+  .markdown h2,
+  .markdown h3 {
+    @apply font-semibold;
+  }
+  .markdown h1 {
+    @apply text-xl;
+  }
+  .markdown h2 {
+    @apply text-lg;
+  }
+  .markdown ul {
+    @apply list-disc pl-5;
+  }
+  .markdown ol {
+    @apply list-decimal pl-5;
+  }
+  .markdown pre {
+    @apply overflow-x-auto rounded-md bg-muted p-3 text-xs;
+  }
+  .markdown code {
+    @apply rounded bg-muted px-1 font-mono text-xs;
+  }
+  .markdown pre code {
+    @apply p-0;
+  }
+  .markdown table {
+    @apply w-full border-collapse;
+  }
+  .markdown th,
+  .markdown td {
+    @apply border px-3 py-2 text-left;
+  }
+  .markdown blockquote {
+    @apply border-l-2 pl-4 text-muted-foreground;
+  }
+}

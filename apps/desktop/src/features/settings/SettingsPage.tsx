@@ -16,6 +16,8 @@ import { useSystemInspection } from "@features/system/useSystemInspection";
 import { SETTING_KEYS } from "./settings-service";
 import { useOfflineLock, useSetBooleanSetting } from "./useSettings";
 
+import { MaintenanceCards } from "./MaintenanceCards";
+
 const THEME_OPTIONS: readonly { value: ThemePreference; label: string }[] = [
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
@@ -71,9 +73,7 @@ export function SettingsPage(): ReactElement {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-medium">Reduce motion</div>
-              <p className="text-sm text-muted-foreground">
-                Minimize animations and transitions (FR-SET-004).
-              </p>
+              <p className="text-sm text-muted-foreground">Minimize animations and transitions.</p>
             </div>
             <Button
               type="button"
@@ -94,6 +94,7 @@ export function SettingsPage(): ReactElement {
 
       <OfflineLockCard />
       <HardwareCard />
+      <MaintenanceCards />
     </section>
   );
 }
@@ -116,7 +117,7 @@ function OfflineLockCard(): ReactElement {
           <div>
             <div className="text-sm font-medium">Offline lock</div>
             <p className="text-sm text-muted-foreground">
-              When on, the app makes no network connections. Recommended (FR-SET-003).
+              All inference stays on this device. Only the local runtime connection is used.
             </p>
           </div>
           <Button

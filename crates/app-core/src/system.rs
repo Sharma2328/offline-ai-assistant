@@ -34,6 +34,9 @@ mod tests {
         let snapshot = inspect(None);
         assert!(!snapshot.hardware.os.is_empty());
         // Runtime is not integrated until Phase 5.
-        assert!(!snapshot.capabilities.is_available());
+        assert_eq!(
+            snapshot.capabilities.is_available(),
+            inference::resolve_llama_binary(None).is_some()
+        );
     }
 }

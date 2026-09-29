@@ -17,7 +17,7 @@ use uuid::Uuid;
 use crate::compat::{assess_compatibility, CompatibilityAssessment};
 use crate::error::{AppError, AppErrorCode, AppResult};
 use crate::hardware::HardwareInfo;
-use crate::{RuntimeCapabilities, RuntimeEngine};
+use crate::{RuntimeCapabilities, RuntimeEngine, RuntimeProfile};
 
 /// Where a model's bytes live: referenced in place (default) or copied into app storage.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Type)]
@@ -43,26 +43,6 @@ impl StorageMode {
             StorageMode::Reference
         }
     }
-}
-
-/// A per-model runtime binding (contract §8.1). The generation-sampling fields are packed
-/// into `runtime_profiles.generation_defaults_json`; the rest are dedicated columns.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Type)]
-#[serde(rename_all = "camelCase")]
-pub struct RuntimeProfile {
-    pub id: String,
-    pub model_id: String,
-    pub engine: RuntimeEngine,
-    pub context_length: u32,
-    pub max_tokens: u32,
-    pub temperature: f32,
-    pub top_p: f32,
-    pub top_k: u32,
-    pub repeat_penalty: f32,
-    pub seed: Option<i64>,
-    pub threads: u32,
-    pub batch_size: u32,
-    pub gpu_layers: u32,
 }
 
 /// Sampling defaults persisted as the `generation_defaults_json` blob.
@@ -351,6 +331,21 @@ pub fn update_runtime_profile(
     profile: &RuntimeProfile,
 ) -> AppResult<RuntimeProfile> {
     validate_profile(profile)?;
+    let model = db
+        .models()
+        .get(&profile.model_id)
+        .map_err(storage_err)?
+        .ok_or_else(|| model_not_found(&profile.model_id))?;
+    if let Ok(metadata) = serde_json::from_str::<ModelMetadata>(&model.metadata_json) {
+        if metadata
+            .context_length_max
+            .is_some_and(|limit| profile.context_length > limit)
+        {
+            return Err(AppError::internal(
+                "Context length exceeds the model's advertised limit.",
+            ));
+        }
+    }
     let defaults = GenerationDefaults {
         max_tokens: profile.max_tokens,
         temperature: profile.temperature,
@@ -473,7 +468,7 @@ fn recommended_values(
     let context_length = context_length_max
         .map(|max| max.min(4096))
         .unwrap_or(4096)
-        .max(512);
+        .max(32);
 
     let threads = hardware.logical_cores.unwrap_or(4).max(1);
 
@@ -493,7 +488,7 @@ fn recommended_values(
         gpu_layers,
         batch_size: 512,
         defaults: GenerationDefaults {
-            max_tokens: 512,
+            max_tokens: 512.min(context_length / 2),
             temperature: 0.7,
             top_p: 0.95,
             top_k: 40,
@@ -533,8 +528,11 @@ fn validate_profile(profile: &RuntimeProfile) -> AppResult<()> {
             "Adjust the runtime settings to valid ranges, or reset to recommended.",
         ))
     };
-    if profile.context_length < 256 {
-        return invalid("context length must be at least 256 tokens".to_string());
+    if profile.context_length < 32 {
+        return invalid("context length must be at least 32 tokens".to_string());
+    }
+    if profile.max_tokens >= profile.context_length {
+        return invalid("Reserve context space for the prompt: generation tokens must be lower than context length.".into());
     }
     if profile.max_tokens < 1 {
         return invalid("max generation tokens must be at least 1".to_string());

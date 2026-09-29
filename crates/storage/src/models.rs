@@ -252,6 +252,16 @@ impl<'a> ModelsRepository<'a> {
         }
         Ok(record)
     }
+
+    /// Stamp a model's `last_used_at` to now (called when the model is loaded). Returns `true`
+    /// if a row was updated.
+    pub fn touch_last_used(&self, id: &str) -> Result<bool, StorageError> {
+        let changed = self.conn.execute(
+            "UPDATE models SET last_used_at = ?2 WHERE id = ?1",
+            params![id, now_iso8601()],
+        )?;
+        Ok(changed == 1)
+    }
 }
 
 fn map_model(row: &Row<'_>) -> rusqlite::Result<ModelRecord> {

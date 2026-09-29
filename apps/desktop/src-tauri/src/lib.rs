@@ -16,13 +16,40 @@ use serde::{Deserialize, Serialize};
 use specta::Type;
 use storage::Database;
 use tauri::{Manager, State};
-use tauri_specta::{collect_commands, Builder};
+use tauri_specta::{collect_commands, collect_events, Builder};
+
+mod chat;
+mod maintenance;
+mod parser;
+mod runtime;
+use maintenance::{
+    diagnostics_clear, diagnostics_export, diagnostics_list, storage_delete_all, storage_usage,
+};
+mod benchmark_commands;
+use benchmark_commands::{
+    benchmarks_control, benchmarks_create, benchmarks_export, benchmarks_list, benchmarks_progress,
+    benchmarks_report, benchmarks_start, BenchmarkState,
+};
+mod document_commands;
+use chat::{
+    chat_context, chat_send, chat_summarize, conversations_create, conversations_delete,
+    conversations_list, conversations_rename, messages_delete, messages_list,
+};
+use document_commands::{
+    collections_create, collections_delete, collections_list, documents_cancel, documents_ingest,
+    documents_list, documents_remove, documents_search, DocumentProgress, DocumentState,
+};
+
+use runtime::{
+    chat_cancel, chat_generate, models_load, models_unload, ChatDone, ChatError, ChatToken,
+    RuntimeCrashed, RuntimeState,
+};
 
 /// Managed application database, guarded for exclusive access across commands.
 ///
 /// SQLite (with our WAL + foreign-keys pragmas) is single-writer; serializing command
 /// access behind a `Mutex` keeps the connection sound without a pool for MVP (§7).
-type Db = Mutex<Database>;
+pub(crate) type Db = Mutex<Database>;
 
 /// Setting keys seeded on first launch (§7.2, FR-SET-003, FR-ONB-003).
 const KEY_OFFLINE_LOCK: &str = "offline_lock";
@@ -43,7 +70,7 @@ fn storage_err(err: storage::StorageError) -> AppError {
 }
 
 /// Lock the managed database, converting a poisoned mutex into an internal error.
-fn lock_db<'a>(db: &'a State<'_, Db>) -> AppResult<std::sync::MutexGuard<'a, Database>> {
+pub(crate) fn lock_db<'a>(db: &'a State<'_, Db>) -> AppResult<std::sync::MutexGuard<'a, Database>> {
     db.lock()
         .map_err(|_| AppError::internal("database lock was poisoned by a previous panic"))
 }
@@ -208,27 +235,88 @@ fn models_recommended_runtime_profile(
 /// files are never touched.
 #[tauri::command]
 #[specta::specta]
-fn models_remove(db: State<'_, Db>, model_id: String) -> AppResult<RemoveResult> {
+async fn models_remove(
+    db: State<'_, Db>,
+    state: State<'_, RuntimeState>,
+    model_id: String,
+) -> AppResult<RemoveResult> {
+    let _operation = state
+        .operation
+        .try_lock()
+        .map_err(|_| AppError::internal("Stop the current operation before removing a model."))?;
+    if let Ok(adapter) = runtime::current_adapter(&state).await {
+        if inference::InferenceAdapter::loaded_model_id(adapter.as_ref())
+            .await
+            .as_deref()
+            == Some(&model_id)
+        {
+            inference::InferenceAdapter::unload_model(adapter.as_ref(), &model_id)
+                .await
+                .map_err(app_core::map_inference_error)?;
+        }
+    }
     let db = lock_db(&db)?;
     remove_model(&db, &model_id)
 }
 
 /// Build the tauri-specta command/event registry (single source of truth for bindings).
 fn specta_builder() -> Builder {
-    Builder::<tauri::Wry>::new().commands(collect_commands![
-        app_version,
-        ping,
-        system_inspect,
-        settings_get,
-        settings_set,
-        models_import,
-        models_list,
-        models_estimate_compatibility,
-        models_get_runtime_profile,
-        models_update_runtime_profile,
-        models_recommended_runtime_profile,
-        models_remove
-    ])
+    Builder::<tauri::Wry>::new()
+        .commands(collect_commands![
+            app_version,
+            ping,
+            system_inspect,
+            settings_get,
+            settings_set,
+            models_import,
+            models_list,
+            models_estimate_compatibility,
+            models_get_runtime_profile,
+            models_update_runtime_profile,
+            models_recommended_runtime_profile,
+            models_remove,
+            models_load,
+            models_unload,
+            chat_generate,
+            chat_cancel,
+            chat_context,
+            chat_summarize,
+            chat_send,
+            conversations_create,
+            conversations_delete,
+            conversations_list,
+            conversations_rename,
+            messages_delete,
+            messages_list,
+            runtime::runtime_status,
+            collections_list,
+            collections_create,
+            collections_delete,
+            documents_list,
+            documents_remove,
+            documents_ingest,
+            documents_cancel,
+            documents_search,
+            benchmarks_list,
+            benchmarks_create,
+            benchmarks_report,
+            benchmarks_start,
+            benchmarks_progress,
+            benchmarks_control,
+            benchmarks_export,
+            storage_usage,
+            storage_delete_all,
+            diagnostics_list,
+            diagnostics_clear,
+            diagnostics_export
+        ])
+        .events(collect_events![
+            ChatToken,
+            ChatDone,
+            ChatError,
+            RuntimeCrashed,
+            DocumentProgress
+        ])
 }
 
 /// Open the app database, apply pending migrations, and seed first-run defaults (§7).
@@ -272,6 +360,11 @@ fn initialize_database(app: &tauri::App) -> Result<Database, Box<dyn std::error:
             .map_err(storage_err)?;
     }
 
+    storage::conversations::ConversationsRepository::new(db.connection()).recover_interrupted()?;
+    db.connection().execute(
+        "UPDATE benchmark_runs SET status='interrupted' WHERE status='running'",
+        [],
+    )?;
     Ok(db)
 }
 
@@ -282,9 +375,19 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .invoke_handler(builder.invoke_handler())
-        .setup(|app| {
+        .setup(move |app| {
+            // Wire tauri-specta events so `Event::emit` reaches the typed frontend listeners.
+            builder.mount_events(app);
             let db = initialize_database(app)?;
             app.manage::<Db>(Mutex::new(db));
+            app.manage(RuntimeState::default());
+            app.manage(DocumentState::default());
+            app.manage(BenchmarkState::default());
+            maintenance::log(
+                app.handle(),
+                "APP_STARTED",
+                "Database migrated and application started.",
+            );
             Ok(())
         })
         .run(tauri::generate_context!())
@@ -311,5 +414,14 @@ mod bindings_export {
         specta_builder()
             .export(exporter, "../src/lib/bindings.ts")
             .expect("failed to export TypeScript bindings");
+        let path = std::path::Path::new("../src/lib/bindings.ts");
+        let generated = std::fs::read_to_string(path).expect("read generated bindings");
+        let normalized = generated
+            .lines()
+            .map(str::trim_end)
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        std::fs::write(path, normalized).expect("normalize generated whitespace");
     }
 }

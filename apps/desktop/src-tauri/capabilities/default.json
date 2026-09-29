@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "Baseline capability for the main window. Kept minimal (offline-first); command permissions are added per feature phase.",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:allow-open"]
+  "permissions": ["core:default", "dialog:allow-open", "dialog:allow-save"]
 }

@@ -19,6 +19,8 @@ pub enum AppErrorCode {
     ModelInvalid,
     /// Model could not be loaded because the device is out of memory.
     ModelOom,
+    /// No inference runtime binary could be found or started (FR-MOD-005, Phase 5).
+    RuntimeUnavailable,
     /// The out-of-process inference runtime crashed or exited unexpectedly.
     RuntimeCrashed,
     /// The request exceeded the model's context window.

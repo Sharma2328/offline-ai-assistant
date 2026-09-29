@@ -1,0 +1,86 @@
+[
+  {
+    "id": "reason-1",
+    "category": "reasoning",
+    "prompt": "Three boxes are labeled A, B and C. A holds 7 coins, B holds twice as many as A, and C holds 3 fewer than B. How many coins are in C? Return only the integer.",
+    "expected": "11",
+    "scorer": "normalized_match"
+  },
+  {
+    "id": "reason-2",
+    "category": "reasoning",
+    "prompt": "Mira arrived before Dev. Dev arrived before Sol. Who arrived last? Answer with one name only.",
+    "expected": "Sol",
+    "scorer": "normalized_match"
+  },
+  {
+    "id": "code-1",
+    "category": "coding",
+    "prompt": "Write a Python function clamp_zero(values) that returns a new list with negative numbers replaced by zero. Return only Python source code.",
+    "expected": "assert clamp_zero([-3, 0, 4]) == [0, 0, 4]\nassert clamp_zero([]) == []\nassert clamp_zero([-1, -2]) == [0, 0]",
+    "scorer": "unit_tests"
+  },
+  {
+    "id": "code-2",
+    "category": "coding",
+    "prompt": "Write a Python function first_unique(text) returning the first character occurring exactly once, or None when no such character exists. Return only Python source code.",
+    "expected": "assert first_unique('aabbcd') == 'c'\nassert first_unique('aabb') is None\nassert first_unique('') is None",
+    "scorer": "unit_tests"
+  },
+  {
+    "id": "summary-1",
+    "category": "summarization",
+    "prompt": "Summarize in one sentence: The Cedar library opened a repair workshop on Tuesday. Twelve volunteers repaired 48 lamps. The workshop will meet monthly.",
+    "expected": ["Tuesday", "12", "48", "monthly"],
+    "scorer": "keypoint"
+  },
+  {
+    "id": "summary-2",
+    "category": "summarization",
+    "prompt": "Summarize the key facts: The Linden team moved its launch from March to April after a battery test failed. The budget remained unchanged.",
+    "expected": ["March", "April", "battery", "budget"],
+    "scorer": "keypoint"
+  },
+  {
+    "id": "extract-1",
+    "category": "extraction",
+    "prompt": "Return only JSON with fields order_id and total: Order CED-418 was paid in full. Its total was 73.50.",
+    "expected": { "order_id": "CED-418", "total": 73.5 },
+    "scorer": "json_fields"
+  },
+  {
+    "id": "extract-2",
+    "category": "extraction",
+    "prompt": "Return only JSON with fields city and count: The Pune branch received 17 replacement sensors.",
+    "expected": { "city": "Pune", "count": 17 },
+    "scorer": "json_fields"
+  },
+  {
+    "id": "instruction-1",
+    "category": "instruction_following",
+    "prompt": "Return exactly the word READY in uppercase, with no punctuation or explanation.",
+    "expected": "READY",
+    "scorer": "exact_match"
+  },
+  {
+    "id": "instruction-2",
+    "category": "instruction_following",
+    "prompt": "Write exactly three lines, in this order: red, green, blue. No bullets, punctuation, or extra text.",
+    "expected": "red\ngreen\nblue",
+    "scorer": "exact_match"
+  },
+  {
+    "id": "retrieval-1",
+    "category": "retrieval",
+    "prompt": "Use only this source: [1] The Elm research station stores spare batteries in locker 9. The keys are held by Nila. Question: Who holds the keys? Return the name and citation only.",
+    "expected": "Nila [1]",
+    "scorer": "token_f1"
+  },
+  {
+    "id": "retrieval-2",
+    "category": "retrieval",
+    "prompt": "Use only this source: [1] The Azure ferry leaves West Pier at 06:40 each morning. Question: What time does it leave? Return the time and citation only.",
+    "expected": "06:40 [1]",
+    "scorer": "token_f1"
+  }
+]

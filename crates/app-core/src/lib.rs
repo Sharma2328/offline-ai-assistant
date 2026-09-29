@@ -10,6 +10,7 @@ mod compat;
 mod error;
 mod hardware;
 mod models;
+mod runtime;
 mod system;
 
 pub use compat::{
@@ -17,12 +18,17 @@ pub use compat::{
 };
 pub use error::{AppError, AppErrorCode, AppResult};
 pub use hardware::{detect_hardware, Gpu, GpuBackend, HardwareInfo};
-pub use inference::{ModelFormat, ModelMetadata, RuntimeCapabilities, RuntimeEngine};
+pub use inference::{
+    ChatMessage, ChatRole, EmbeddingConfig, FinishReason, GenerationRequest, GenerationResult,
+    GenerationTiming, LoadModelConfig, LoadedModel, ModelFormat, ModelMetadata,
+    RuntimeCapabilities, RuntimeEngine, RuntimeProfile, TokenEvent,
+};
 pub use models::{
     estimate_compatibility, get_runtime_profile, import_model, list_models,
     recommended_runtime_profile, remove_model, update_runtime_profile, ImportedModel,
-    ModelImportResult, ModelRow, RemoveResult, RuntimeProfile, StorageMode,
+    ModelImportResult, ModelRow, RemoveResult, StorageMode,
 };
+pub use runtime::{map_inference_error, mark_model_used, resolve_load_request};
 pub use system::{inspect, SystemInspection};
 
 /// The application version, sourced from the crate manifest.

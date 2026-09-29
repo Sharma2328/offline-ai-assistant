@@ -11,6 +11,10 @@
     "pnpm": ">=10"
   },
   "scripts": {
+    "setup:runtime": "node scripts/setup-runtime.mjs",
+    "test:native": "node scripts/verify-native.mjs",
+    "test:e2e": "pnpm --filter @offline-ai/desktop exec playwright test",
+    "build:desktop": "pnpm tauri build --bundles app,dmg",
     "dev": "pnpm --filter @offline-ai/desktop dev",
     "build": "pnpm --filter @offline-ai/desktop build",
     "tauri": "pnpm --filter @offline-ai/desktop tauri",

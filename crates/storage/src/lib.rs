@@ -9,6 +9,7 @@ use std::path::Path;
 use rusqlite::Connection;
 use thiserror::Error;
 
+pub mod conversations;
 pub mod migrations;
 pub mod models;
 pub mod settings;
@@ -108,14 +109,14 @@ mod tests {
         assert_eq!(db.schema_version().unwrap(), 0);
 
         let first = db.migrate().unwrap();
-        assert_eq!(first.applied, vec![1, 2, 3]);
-        assert_eq!(first.current_version, 3);
-        assert_eq!(db.schema_version().unwrap(), 3);
+        assert_eq!(first.applied, vec![1, 2, 3, 4, 5, 6, 7, 8]);
+        assert_eq!(first.current_version, 8);
+        assert_eq!(db.schema_version().unwrap(), 8);
 
         // Running again applies nothing (forward-only, idempotent).
         let second = db.migrate().unwrap();
         assert!(second.applied.is_empty());
-        assert_eq!(second.current_version, 3);
+        assert_eq!(second.current_version, 8);
     }
 
     #[test]
@@ -126,12 +127,12 @@ mod tests {
         {
             let mut db = Database::open(&path).unwrap();
             let report = db.migrate().unwrap();
-            assert_eq!(report.current_version, 3);
+            assert_eq!(report.current_version, 8);
         }
 
         // Reopen: schema version is remembered; migrating again is a no-op.
         let mut reopened = Database::open(&path).unwrap();
-        assert_eq!(reopened.schema_version().unwrap(), 3);
+        assert_eq!(reopened.schema_version().unwrap(), 8);
         assert!(reopened.migrate().unwrap().applied.is_empty());
     }
 

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Regenerates apps/desktop/src/lib/bindings.ts from the Rust command registry by
 // running the tauri-specta export test. With `--check`, additionally fails if the
-// generated file drifts from what is committed (CI type-drift guard, §8.6).
+// generated file drifts from the current source file (CI type-drift guard, §8.6).
 
+import { readFileSync } from "node:fs";
 import { execSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { dirname, resolve } from "node:path";
@@ -15,6 +16,8 @@ function run(command) {
   execSync(command, { cwd: repoRoot, stdio: "inherit" });
 }
 
+const before = check ? readFileSync(resolve(repoRoot, bindingsPath), "utf8") : null;
+
 // The export test writes bindings.ts as a side effect.
 run(
   "cargo test -p offline-ai-assistant --lib " +
@@ -22,8 +25,10 @@ run(
 );
 
 if (check) {
-  // Fails (non-zero exit) if the regenerated bindings differ from the committed file.
-  run(`git diff --exit-code -- ${bindingsPath}`);
+  if (before !== readFileSync(resolve(repoRoot, bindingsPath), "utf8")) {
+    console.error("Bindings were stale. Review the regenerated bindings.ts and rerun this check.");
+    process.exit(1);
+  }
   console.log("Bindings are up to date.");
 } else {
   console.log(`Regenerated ${bindingsPath}.`);
