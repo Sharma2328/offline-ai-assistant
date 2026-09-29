@@ -1,0 +1,12 @@
+{
+  "generation": {
+    "url": "https://huggingface.co/ggml-org/models-moved/resolve/main/tinyllamas/stories15M-q4_0.gguf",
+    "sha256": "66967fbece6dbe97886593fdbb73589584927e29119ec31f08090732d1861739",
+    "bytes": 19077344
+  },
+  "embedding": {
+    "url": "https://huggingface.co/ggml-org/bge-small-en-v1.5-Q8_0-GGUF/resolve/main/bge-small-en-v1.5-q8_0.gguf",
+    "sha256": "f046db1dc724cf4f6f0a0c5917e922823b73eb1d27b8f9a9c2797f7866974804",
+    "bytes": 36685152
+  }
+}
