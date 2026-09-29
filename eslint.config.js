@@ -12,6 +12,9 @@ export default tseslint.config(
       "**/dist/**",
       "**/target/**",
       "**/node_modules/**",
+      "**/test-results/**",
+      "**/playwright-report/**",
+      "apps/desktop/src-tauri/runtime/**",
       // Generated from Rust; linting is the generator's responsibility.
       "apps/desktop/src/lib/bindings.ts",
     ],
@@ -45,7 +48,7 @@ export default tseslint.config(
 
   // Untyped lint for workspace-package stubs and TS config files (not in a tsconfig).
   {
-    files: ["packages/**/*.{ts,tsx}", "**/*.config.{ts,mts,cts}"],
+    files: ["packages/**/*.{ts,tsx}", "apps/desktop/e2e/**/*.ts", "**/*.config.{ts,mts,cts}"],
     extends: [...tseslint.configs.recommended],
     languageOptions: {
       globals: { ...globals.node },

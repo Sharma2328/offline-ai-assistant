@@ -26,7 +26,7 @@ async ping() : Promise<Result<string, AppError>> {
 },
 /**
  * Inspect local hardware + runtime capabilities (FR-ONB-001, contract §9.1).
- * 
+ *
  * Purely local: hardware probing via `sysinfo`, no network access. The app-data volume
  * is used for free-disk reporting so the number reflects where models/indexes will live.
  */
@@ -138,12 +138,316 @@ async modelsRemove(modelId: string) : Promise<Result<RemoveResult, AppError>> {
     if(e instanceof Error) throw e;
     else return { status: "error", error: e  as any };
 }
+},
+/**
+ * Load a model into the runtime (FR-MOD-005). Replaces any currently-loaded model.
+ */
+async modelsLoad(modelId: string) : Promise<Result<LoadedModel, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_load", { modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Unload the current model, releasing its memory (FR-MOD-004).
+ */
+async modelsUnload(modelId: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("models_unload", { modelId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Stream a chat generation (FR-CHAT-002). Tokens arrive via `chat:token`; the resolved value
+ * is also broadcast as `chat:done`. Errors are emitted as `chat:error` and returned.
+ */
+async chatGenerate(request: GenerationRequest) : Promise<Result<GenerationResult, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("chat_generate", { request }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Cancel an in-flight generation (FR-CHAT-006). Idempotent: cancelling an unknown id is a no-op.
+ */
+async chatCancel(correlationId: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("chat_cancel", { correlationId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Tokenizer-based estimate with explicit allowances for templates and retrieved passages.
+ */
+async chatContext(modelId: string, text: string, messageCount: number, collectionId: string | null) : Promise<Result<ContextUsage, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("chat_context", { modelId, text, messageCount, collectionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+/**
+ * Summarize the selected branch locally into a new conversation; preserve the source history.
+ */
+async chatSummarize(conversationId: string, parentId: string, correlationId: string) : Promise<Result<Conversation, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("chat_summarize", { conversationId, parentId, correlationId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async chatSend(input: SendMessage) : Promise<Result<GenerationResult, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("chat_send", { input }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async conversationsCreate(modelId: string, systemPrompt: string, collectionId: string | null) : Promise<Result<Conversation, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("conversations_create", { modelId, systemPrompt, collectionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async conversationsDelete(id: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("conversations_delete", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async conversationsList(search: string) : Promise<Result<Conversation[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("conversations_list", { search }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async conversationsRename(id: string, title: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("conversations_rename", { id, title }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async messagesDelete(conversationId: string, id: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("messages_delete", { conversationId, id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async messagesList(conversationId: string) : Promise<Result<Message[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("messages_list", { conversationId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async runtimeStatus() : Promise<Result<string | null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("runtime_status") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async collectionsList() : Promise<Result<Collection[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("collections_list") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async collectionsCreate(name: string, embeddingModelId: string, chunkSize: number, overlap: number, topK: number) : Promise<Result<string, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("collections_create", { name, embeddingModelId, chunkSize, overlap, topK }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async collectionsDelete(id: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("collections_delete", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async documentsList(collectionId: string) : Promise<Result<Document[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("documents_list", { collectionId }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async documentsRemove(id: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("documents_remove", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async documentsIngest(collectionId: string, paths: string[]) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("documents_ingest", { collectionId, paths }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async documentsCancel() : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("documents_cancel") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async documentsSearch(collectionId: string, query: string) : Promise<Result<SourceChunk[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("documents_search", { collectionId, query }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async benchmarksList() : Promise<Result<BenchmarkRun[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("benchmarks_list") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async benchmarksCreate(config: BenchmarkConfig) : Promise<Result<string, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("benchmarks_create", { config }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async benchmarksReport(id: string, preset: string) : Promise<Result<BenchmarkReport, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("benchmarks_report", { id, preset }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async benchmarksStart(id: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("benchmarks_start", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async benchmarksProgress(id: string) : Promise<Result<BenchmarkProgress | null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("benchmarks_progress", { id }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async benchmarksControl(id: string, action: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("benchmarks_control", { id, action }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async benchmarksExport(id: string, preset: string, kind: string, path: string, selectedResponses: string[]) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("benchmarks_export", { id, preset, kind, path, selectedResponses }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async storageUsage() : Promise<Result<StorageUsage, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("storage_usage") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async storageDeleteAll(confirmation: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("storage_delete_all", { confirmation }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async diagnosticsList() : Promise<Result<Diagnostic[], AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("diagnostics_list") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async diagnosticsClear() : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("diagnostics_clear") };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
+},
+async diagnosticsExport(path: string) : Promise<Result<null, AppError>> {
+    try {
+    return { status: "ok", data: await TAURI_INVOKE("diagnostics_export", { path }) };
+} catch (e) {
+    if(e instanceof Error) throw e;
+    else return { status: "error", error: e  as any };
+}
 }
 }
 
 /** user-defined events **/
 
 
+export const events = __makeEvents__<{
+chatDone: ChatDone,
+chatError: ChatError,
+chatToken: ChatToken,
+documentProgress: DocumentProgress,
+runtimeCrashed: RuntimeCrashed
+}>({
+chatDone: "chat-done",
+chatError: "chat-error",
+chatToken: "chat-token",
+documentProgress: "document-progress",
+runtimeCrashed: "runtime-crashed"
+})
 
 /** user-defined constants **/
 
@@ -154,77 +458,107 @@ async modelsRemove(modelId: string) : Promise<Result<RemoveResult, AppError>> {
 /**
  * The single error type returned across the command boundary (doc §8.5).
  */
-export type AppError = { 
+export type AppError = {
 /**
  * Machine-readable classification.
  */
-code: AppErrorCode; 
+code: AppErrorCode;
 /**
  * Human-readable description of what went wrong.
  */
-message: string; 
+message: string;
 /**
  * Actionable guidance for how the user can recover.
  */
-recovery: string; 
+recovery: string;
 /**
  * Optional structured context; redacted before any export.
  */
 details?: Partial<{ [key in string]: JsonValue }> | null }
 /**
  * Stable machine-readable error codes (spec §17 / doc §8.5).
- * 
+ *
  * Serialized as `SCREAMING_SNAKE_CASE` to match the generated TS discriminated union.
  */
-export type AppErrorCode = 
+export type AppErrorCode =
 /**
  * Model file is missing, corrupt, or an unsupported format.
  */
-"MODEL_INVALID" | 
+"MODEL_INVALID" |
 /**
  * Model could not be loaded because the device is out of memory.
  */
-"MODEL_OOM" | 
+"MODEL_OOM" |
+/**
+ * No inference runtime binary could be found or started (FR-MOD-005, Phase 5).
+ */
+"RUNTIME_UNAVAILABLE" |
 /**
  * The out-of-process inference runtime crashed or exited unexpectedly.
  */
-"RUNTIME_CRASHED" | 
+"RUNTIME_CRASHED" |
 /**
  * The request exceeded the model's context window.
  */
-"CONTEXT_EXCEEDED" | 
+"CONTEXT_EXCEEDED" |
 /**
  * A document could not be parsed (unsupported/corrupt/blocked entity).
  */
-"DOCUMENT_PARSE_FAILED" | 
+"DOCUMENT_PARSE_FAILED" |
 /**
  * A benchmark case exceeded its per-case time budget.
  */
-"BENCH_CASE_TIMEOUT" | 
+"BENCH_CASE_TIMEOUT" |
 /**
  * A benchmark dataset failed validation.
  */
-"DATASET_INVALID" | 
+"DATASET_INVALID" |
 /**
  * Not enough free disk space to complete the operation.
  */
-"DISK_SPACE_LOW" | 
+"DISK_SPACE_LOW" |
 /**
  * An unexpected internal error (bug / unhandled condition).
  */
 "INTERNAL"
+export type BenchmarkConfig = { modelIds: string[]; suiteId: string; warmupReps: number; measuredReps: number; maxTokens: number; temperature: number; seed: number; timeoutMs: number; preset: string }
+export type BenchmarkProgress = { runId: string; modelName: string; caseId: string | null; phase: string; completed: number; total: number; elapsedMs: number; etaMs: number | null; currentRamBytes: number | null; currentCpuPercent: number | null }
+export type BenchmarkReport = { preset: string; warnings: string[]; bestByCategory: Partial<{ [key in string]: string }>; schemaVersion: string; run: BenchmarkRun; models: ModelMetrics[]; cases: CaseResult[]; bestOverall: string | null; bestQuality: string | null; fastest: string | null; mostMemoryEfficient: string | null }
+export type BenchmarkRun = { id: string; status: string; config: RunConfig; environment: JsonValue; error: string | null; createdAt: string; completed: number; total: number }
+export type CaseResult = { scorer?: string; modelLoadTimeMs?: number | null; modelId: string; caseId: string; category: string; repetition: number; input: string; output: string; score: number; timing: GenerationTiming; peakRamBytes: number | null; error: string | null; runtimeVersion: string }
+/**
+ * `chat:done` — the finalized generation result (finish reason, timing).
+ */
+export type ChatDone = GenerationResult
+/**
+ * `chat:error` — a generation failed mid-stream.
+ */
+export type ChatError = AppError
+/**
+ * One message in a generation request (contract §8.2).
+ */
+export type ChatMessage = { role: ChatRole; content: string }
+/**
+ * Chat role for a single turn (contract §8.2).
+ */
+export type ChatRole = "system" | "user" | "assistant"
+/**
+ * `chat:token` — a single streamed token (FR-CHAT-002).
+ */
+export type ChatToken = TokenEvent
+export type Collection = { id: string; name: string; embeddingModelId: string; chunkSize: number; overlap: number; topK: number; documentCount: number }
 /**
  * Result of a preflight estimate for a model + context length against current hardware.
  */
-export type CompatibilityAssessment = { status: CompatibilityStatus; estimatedMemoryBytes: number; 
+export type CompatibilityAssessment = { status: CompatibilityStatus; estimatedMemoryBytes: number;
 /**
  * Available memory used for the estimate, or `0` when memory could not be detected.
  */
-availableMemoryBytes: number; 
+availableMemoryBytes: number;
 /**
  * Plain-language reasons (never conveyed by color alone, FR-ONB-002).
  */
-reasons: string[]; 
+reasons: string[];
 /**
  * `true` → the configuration is invalid and loading must be disabled.
  */
@@ -233,6 +567,32 @@ blocking: boolean }
  * Three-way compatibility class (contract §8.1).
  */
 export type CompatibilityStatus = "recommended" | "may_be_slow" | "not_recommended"
+export type ContextUsage = { usedTokens: number; responseTokens: number; contextLength: number; documentReserve: number }
+export type Conversation = { id: string; title: string; modelId: string | null; systemPrompt: string; collectionId: string | null; createdAt: string; updatedAt: string }
+export type Diagnostic = { id: number; code: string; message: string; createdAt: string }
+export type Document = { id: string; collectionId: string; name: string; status: string; error: string | null; chunkCount: number }
+export type DocumentProgress = { collectionId: string; fileName: string; completed: number; total: number; phase: string }
+/**
+ * Why a generation ended (contract §8.2).
+ */
+export type FinishReason = "stop" | "length" | "cancelled" | "error"
+/**
+ * A streaming generation request (contract §8.2). `correlation_id` routes streamed events and
+ * cancellation to the right view.
+ */
+export type GenerationRequest = { correlationId: string; modelId: string; messages: ChatMessage[]; profile: RuntimeProfile; stop: string[] }
+/**
+ * The final result of a generation (contract §8.2; payload of `chat:done`).
+ */
+export type GenerationResult = { correlationId: string; text: string; finishReason: FinishReason; timing: GenerationTiming;
+/**
+ * Engine-specific diagnostics preserved verbatim (spec §12.2).
+ */
+raw: JsonValue }
+/**
+ * Timing metrics for a completed generation (contract §8.2). `ttft_ms` is time-to-first-token.
+ */
+export type GenerationTiming = { ttftMs: number; totalMs: number; outputTokens: number; tokensPerSecond: number }
 /**
  * A detected GPU (or accelerator). `vram_bytes` is `None` on unified-memory systems.
  */
@@ -244,7 +604,7 @@ export type GpuBackend = "metal" | "cuda" | "vulkan" | "cpu"
 /**
  * Local hardware snapshot (contract §8.1). Numeric fields are `None` when undetectable.
  */
-export type HardwareInfo = { os: string; arch: string; cpuModel: string | null; logicalCores: number | null; totalMemoryBytes: number | null; availableMemoryBytes: number | null; gpus: Gpu[]; availableDiskBytes: number | null; 
+export type HardwareInfo = { os: string; arch: string; cpuModel: string | null; logicalCores: number | null; totalMemoryBytes: number | null; availableMemoryBytes: number | null; gpus: Gpu[]; availableDiskBytes: number | null;
 /**
  * Names of fields that could not be detected on this system (FR-ONB-001).
  */
@@ -255,6 +615,11 @@ undetected: string[] }
 export type ImportedModel = { id: string; format: ModelFormat; architecture: string | null; parameterCount: number | null; quantization: string | null; contextLengthMax: number | null; sizeBytes: number; sha256: string; raw: Partial<{ [key in string]: string }> }
 export type JsonValue = null | boolean | number | string | JsonValue[] | Partial<{ [key in string]: JsonValue }>
 /**
+ * Result of a successful load (contract §8.2).
+ */
+export type LoadedModel = { modelId: string; loadTimeMs: number; capabilities: RuntimeCapabilities }
+export type Message = { citationsJson: string | null; id: string; conversationId: string; parentId: string | null; role: string; content: string; status: string; metricsJson: string | null; createdAt: string }
+/**
  * Model container format. Only GGUF is supported in the MVP (P1: extra formats).
  */
 export type ModelFormat = "gguf"
@@ -264,50 +629,68 @@ export type ModelFormat = "gguf"
  * (FR-MOD-001d: "detected and de-duplicated with a prompt").
  */
 export type ModelImportResult = { model: ImportedModel; deduplicated: boolean }
+export type ModelMetrics = { modelLoadTimeMs: number | null; modelId: string; name: string; quality: number; qualityByCategory: Partial<{ [key in string]: number }>; latencyMedianMs: number; latencyP95Ms: number; ttftMedianMs: number; tokensPerSecondMedian: number; tokensPerSecondMean: number; tokensPerSecondStdDev: number; peakRamBytes: number | null; failureRate: number; timeoutRate: number; overall: number | null; weights: [number, number, number, number]; unavailableMetrics: string[] }
 /**
  * A library row (FR-MOD-002); returned by `models.list`.
  */
 export type ModelRow = { id: string; name: string; fileUri: string; storageMode: StorageMode; sizeBytes: number; sha256: string; architecture: string | null; quantization: string | null; lastUsedAt: string | null; compatibility: CompatibilityAssessment | null }
+export type ModelSnapshot = { id: string; name: string; sha256: string; sizeBytes: number; profile: RuntimeProfile }
 /**
  * Result of `models.remove` (contract §9.2). `source_file_affected` is `true` only when a
  * file was deleted from disk — which happens for **managed** copies, never for referenced
  * source files (FR-MOD-006).
  */
 export type RemoveResult = { ok: boolean; sourceFileAffected: boolean }
+export type RunConfig = { settings: BenchmarkConfig; models: ModelSnapshot[]; datasetChecksum: string; datasetVersion: string }
 /**
  * Capabilities of the active inference runtime (spec §12.2; contract §8.1).
  */
-export type RuntimeCapabilities = { engine: RuntimeEngine; 
+export type RuntimeCapabilities = { engine: RuntimeEngine;
 /**
  * Detected runtime version, or [`ENGINE_VERSION_UNAVAILABLE`] when not installed.
  */
-engineVersion: string; supportsSeed: boolean; supportsGpuOffload: boolean; supportsEmbeddings: boolean; deterministicSampling: boolean; 
+engineVersion: string; supportsSeed: boolean; supportsGpuOffload: boolean; supportsEmbeddings: boolean; deterministicSampling: boolean;
 /**
  * Maximum context the runtime advertises, when known.
  */
 maxContext: number | null }
 /**
+ * `runtime:crashed` — the out-of-process runtime exited unexpectedly (NFR-REL-001).
+ */
+export type RuntimeCrashed = { engine: RuntimeEngine; modelId: string; code: number | null }
+/**
  * Inference engine identifier. Ollama is a post-MVP (P1) adapter.
  */
 export type RuntimeEngine = "llama.cpp" | "ollama"
 /**
- * A per-model runtime binding (contract §8.1). The generation-sampling fields are packed
- * into `runtime_profiles.generation_defaults_json`; the rest are dedicated columns.
+ * A per-model runtime binding (contract §8.1). The generation-sampling fields are packed into
+ * `runtime_profiles.generation_defaults_json` by the storage layer; the rest are columns.
+ *
+ * Lives in the `inference` crate (not `storage`/`app-core`) because it is fundamentally a
+ * runtime concept and is shared by both the adapter contract and the model repository. It is
+ * re-exported from `app-core` so existing call sites are unaffected.
  */
 export type RuntimeProfile = { id: string; modelId: string; engine: RuntimeEngine; contextLength: number; maxTokens: number; temperature: number; topP: number; topK: number; repeatPenalty: number; seed: number | null; threads: number; batchSize: number; gpuLayers: number }
+export type SendMessage = { conversationId: string; parentId: string | null; content: string | null; correlationId: string }
 /**
  * A single `app_settings` entry exposed to the UI. `value` is the parsed JSON so the
  * frontend receives a real bool/string/number/object rather than a JSON string (§9).
  */
 export type SettingEntry = { key: string; value: JsonValue }
+export type SourceChunk = { id: string; documentId: string; fileName: string; page: number | null; text: string; score: number }
 /**
  * Where a model's bytes live: referenced in place (default) or copied into app storage.
  */
 export type StorageMode = "reference" | "managed"
+export type StorageUsage = { path: string; databaseBytes: number; conversationBytes: number; indexBytes: number; benchmarkBytes: number; managedModelBytes: number; conversations: number; documents: number; benchmarkRuns: number }
 /**
  * Combined hardware + runtime snapshot returned by `system.inspect` (contract §9.1).
  */
 export type SystemInspection = { hardware: HardwareInfo; capabilities: RuntimeCapabilities }
+/**
+ * A single streamed token (payload of the `chat:token` event, contract §8.2).
+ */
+export type TokenEvent = { correlationId: string; token: string; index: number }
 
 /** tauri-specta globals **/
 

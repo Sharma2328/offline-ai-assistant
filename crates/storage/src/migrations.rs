@@ -38,6 +38,31 @@ const MIGRATIONS: &[Migration] = &[
         name: "models",
         sql: include_str!("../migrations/0003_models.sql"),
     },
+    Migration {
+        version: 4,
+        name: "conversations",
+        sql: include_str!("../migrations/0004_conversations.sql"),
+    },
+    Migration {
+        version: 5,
+        name: "documents",
+        sql: include_str!("../migrations/0005_documents.sql"),
+    },
+    Migration {
+        version: 6,
+        name: "citations",
+        sql: include_str!("../migrations/0006_citations.sql"),
+    },
+    Migration {
+        version: 7,
+        name: "benchmarks",
+        sql: include_str!("../migrations/0007_benchmarks.sql"),
+    },
+    Migration {
+        version: 8,
+        name: "diagnostics",
+        sql: include_str!("../migrations/0008_diagnostics.sql"),
+    },
 ];
 
 /// Summary of a migration run.

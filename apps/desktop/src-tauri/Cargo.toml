@@ -29,3 +29,10 @@ specta = { workspace = true }
 specta-typescript = "0.0.9"
 tauri-specta = { version = "=2.0.0-rc.21", features = ["derive", "typescript"] }
 tracing = { workspace = true }
+tokio = { workspace = true }
+tokio-util = { workspace = true }
+uuid = { workspace = true }
+documents = { workspace = true }
+benchmark = { workspace = true }
+rusqlite = { workspace = true }
+sysinfo = { workspace = true }

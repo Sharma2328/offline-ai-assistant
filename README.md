@@ -1,39 +1,101 @@
 # Offline AI Assistant
 
-A local-first desktop app for offline chat, document Q&A (RAG), and local model
-benchmarking. Everything runs on-device — **no cloud APIs, no remote telemetry**.
+A macOS Apple Silicon desktop application for local chat, document search and Q&A,
+and repeatable model benchmarks. The app uses Tauri 2, React, TypeScript, Rust,
+SQLite, and a bundled llama.cpp runtime. It does not download models or call cloud
+inference services.
 
-- **Shell:** Tauri v2 · React 18 + TypeScript (strict) + Vite + Tailwind + shadcn/ui
-- **Core:** Rust workspace (`app-core`, `inference`, `benchmark`, `documents`, `storage`)
-- **Runtime:** llama.cpp, out-of-process, behind a common `InferenceAdapter`
-- **Storage:** SQLite (WAL, FK on, versioned migrations) + filesystem for large files
-- **Type safety:** Rust is the source of truth; `tauri-specta` generates `bindings.ts`
+## Run locally
 
-The authoritative development plan is **[`PROJECT_REQUIREMENTS.md`](./PROJECT_REQUIREMENTS.md)**
-(17 sections). This repository is being built phase-by-phase against it.
-
-## Prerequisites
-
-- Node.js ≥ 20 and pnpm ≥ 10
-- Rust (stable) with the `aarch64-apple-darwin` target
-- macOS Apple Silicon (first-release target; interfaces kept cross-platform)
-
-## Common tasks
+Requires macOS 13.3+ on Apple Silicon, Xcode Command Line Tools, current stable Rust,
+Node.js 20+, and pnpm 10. Python 3 is also required for executable coding benchmarks.
 
 ```bash
-pnpm install                # install workspace JS deps
-pnpm --filter @offline-ai/desktop dev    # run the app (Tauri dev)
-pnpm build                  # typecheck + build the frontend
-cargo build --workspace     # build all Rust crates
-cargo test --workspace      # run Rust tests (incl. storage migrations)
-pnpm lint && pnpm format:check           # JS lint + format
-cargo fmt --all -- --check && cargo clippy --workspace -- -D warnings
-pnpm generate:bindings      # regenerate apps/desktop/src/lib/bindings.ts from Rust
-pnpm check:bindings         # fail if bindings drift (CI guard)
+pnpm install --frozen-lockfile
+pnpm setup:runtime          # explicit build-time download of a checksum-pinned runtime
+pnpm dev                   # starts the native desktop app
 ```
 
-## Repository layout
+1. Complete hardware inspection and onboarding.
+2. In **Models**, import a local instruction-tuned GGUF. Keep a reference to the
+   original file or create an app-managed copy, then review the memory assessment.
+3. In **Chat**, select and load the model. Conversations, branches, partial
+   responses, and search history are saved locally. Context estimates reserve
+   response space; **Summarize into new chat** uses the loaded model.
+4. For document Q&A, also import a **bge-small-en-v1.5 GGUF** embedding model. In
+   **Documents**, create a collection and index PDF, TXT, Markdown, or DOCX files.
+   Select that collection when creating a chat to retrieve supporting passages.
+5. In **Benchmarks**, select models, a suite, warm-ups, and repetitions. Runs can
+   pause, cancel, and resume. Reports include raw metrics, comparison weights,
+   case outputs, and JSON/CSV or selected-response exports.
 
-See `PROJECT_REQUIREMENTS.md` §6. Top level: `apps/desktop` (UI + Tauri host),
-`crates/*` (Rust domain logic), `packages/*` (shared UI, contracts, benchmark suites),
-`fixtures/`, `docs/`, `scripts/`.
+The generation fixture used by tests is a tiny story model. It checks execution
+and persistence; it is not suitable for useful assistant answers or quality comparisons.
+
+## Build the desktop app
+
+```bash
+pnpm build:desktop
+```
+
+Artifacts are written under `target/release/bundle/`. Builds include the pinned
+runtime and its MIT license, but no model files. Public distribution additionally
+requires an Apple Developer signing identity and notarization credentials.
+
+Open `target/release/bundle/dmg/Offline AI Assistant_0.1.0_aarch64.dmg` and drag the
+app into Applications, or run the `.app` under `target/release/bundle/macos/`.
+Complete onboarding and import your own local GGUF model to start chatting.
+
+## Verification
+
+```bash
+pnpm lint
+pnpm format:check
+pnpm typecheck
+pnpm test
+cargo fmt --all -- --check
+cargo clippy --workspace --all-targets -- -D warnings
+cargo test --workspace
+pnpm check:bindings
+pnpm build
+pnpm test:e2e               # installed Chrome locally; Chromium in CI
+```
+
+Native tests are explicit so missing fixtures are never reported as passing inference:
+
+```bash
+node scripts/setup-runtime.mjs --fixtures  # explicit test-asset download
+pnpm test:native                          # no downloads during these tests
+```
+
+Native checks cover real generation, cancellation, embeddings, persisted chat,
+document retrieval, blocked external runtime sockets, and coding-runner isolation.
+Browser tests use a deterministic Tauri IPC fixture and exercise the UI separately.
+
+## Privacy and storage
+
+The frontend has a restrictive Content Security Policy. Runtime children bind to
+loopback, use session authentication, ignore proxy settings, and run under a macOS
+policy denying non-loopback networking. Markdown cannot load remote resources.
+Coding benchmarks run in a separate process with no network access, restricted
+filesystem permissions, CPU and wall-clock limits, and a parent memory watchdog.
+
+SQLite and managed models live in the app data directory shown in **Settings**.
+Referenced source models and documents remain in their original locations.
+**Delete local data** requires an explicit confirmation; it removes app-owned data
+and managed models while preserving referenced originals. Diagnostics stay local
+and omit prompt/document contents. Export files may contain the selected prompts
+and responses; absolute paths are redacted.
+
+## Project status and structure
+
+See [PROJECT_STATUS.md](PROJECT_STATUS.md) for implementation coverage, validation,
+and remaining release work. [PROJECT_REQUIREMENTS.md](PROJECT_REQUIREMENTS.md)
+contains the full design and acceptance criteria; its original phase checklist is
+historical and does not replace the current status report.
+
+- `apps/desktop`: React application and Tauri command adapters
+- `crates/{app-core,inference,storage,documents,benchmark}`: Rust services
+- `packages/benchmark-suites`: original versioned datasets and license
+- `scripts`: runtime provisioning, native verification, and generated bindings
+- `fixtures`: test-asset metadata; downloaded GGUFs are ignored by Git

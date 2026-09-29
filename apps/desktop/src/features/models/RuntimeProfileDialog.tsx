@@ -27,8 +27,20 @@ interface FieldSpec {
 
 // Field specs mirror the backend validation ranges in app-core (FR-MOD-003a).
 const FIELDS: readonly FieldSpec[] = [
-  { key: "contextLength", label: "Context length", hint: "Tokens (min 256)", step: 256, integer: true },
-  { key: "maxTokens", label: "Max output tokens", hint: "Per response (min 1)", step: 64, integer: true },
+  {
+    key: "contextLength",
+    label: "Context length",
+    hint: "Tokens (min 32)",
+    step: 32,
+    integer: true,
+  },
+  {
+    key: "maxTokens",
+    label: "Max output tokens",
+    hint: "Per response (min 1)",
+    step: 64,
+    integer: true,
+  },
   { key: "temperature", label: "Temperature", hint: "0.0 – 2.0", step: 0.1, integer: false },
   { key: "topP", label: "Top-p", hint: "0.0 – 1.0", step: 0.05, integer: false },
   { key: "topK", label: "Top-k", hint: "0 disables", step: 1, integer: true },
@@ -40,9 +52,10 @@ const FIELDS: readonly FieldSpec[] = [
 
 /** Client-side validation mirroring app-core `validate_profile`, for immediate feedback. */
 function validate(draft: RuntimeProfile): string | null {
-  if (draft.contextLength < 256) return "Context length must be at least 256 tokens.";
+  if (draft.contextLength < 32) return "Context length must be at least 32 tokens.";
   if (draft.maxTokens < 1) return "Max output tokens must be at least 1.";
-  if (draft.temperature < 0 || draft.temperature > 2) return "Temperature must be between 0.0 and 2.0.";
+  if (draft.temperature < 0 || draft.temperature > 2)
+    return "Temperature must be between 0.0 and 2.0.";
   if (draft.topP < 0 || draft.topP > 1) return "Top-p must be between 0.0 and 1.0.";
   if (draft.repeatPenalty < 0 || draft.repeatPenalty > 4)
     return "Repeat penalty must be between 0.0 and 4.0.";

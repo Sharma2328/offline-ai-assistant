@@ -51,7 +51,10 @@ export function ModelsPage(): ReactElement {
   const hasModels = models !== undefined && models.length > 0;
 
   return (
-    <section aria-labelledby="models-heading" className="mx-auto flex h-full w-full max-w-5xl flex-col gap-6 p-8">
+    <section
+      aria-labelledby="models-heading"
+      className="mx-auto flex h-full w-full max-w-5xl flex-col gap-6 p-8"
+    >
       <header className="flex items-center justify-between gap-4">
         <div>
           <h1 id="models-heading" className="text-2xl font-semibold tracking-tight">

@@ -34,6 +34,11 @@
       "icons/128x128@2x.png",
       "icons/icon.icns",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": ["runtime/bin/*", "runtime/manifest.json", "runtime/LICENSE"],
+    "macOS": {
+      "minimumSystemVersion": "13.3",
+      "signingIdentity": "-"
+    }
   }
 }

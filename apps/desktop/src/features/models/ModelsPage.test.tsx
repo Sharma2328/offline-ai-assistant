@@ -36,7 +36,8 @@ const pickOpen = vi.fn<() => Promise<unknown>>();
 vi.mock("@lib/bindings", () => ({
   commands: {
     modelsList: () => modelsList(),
-    modelsImport: (sourcePath: string, storageMode: string) => modelsImport(sourcePath, storageMode),
+    modelsImport: (sourcePath: string, storageMode: string) =>
+      modelsImport(sourcePath, storageMode),
     modelsRemove: (modelId: string) => modelsRemove(modelId),
   },
 }));
