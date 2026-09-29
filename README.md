@@ -99,3 +99,12 @@ historical and does not replace the current status report.
 - `packages/benchmark-suites`: original versioned datasets and license
 - `scripts`: runtime provisioning, native verification, and generated bindings
 - `fixtures`: test-asset metadata; downloaded GGUFs are ignored by Git
+
+## License
+
+Licensed under the [MIT License](LICENSE) © 2026 Abhinav Sharma.
+
+The original benchmark prompts in `packages/benchmark-suites` are dedicated to the
+public domain under [CC0 1.0](packages/benchmark-suites/LICENSE). The llama.cpp
+runtime is downloaded at build time under its own license and is not distributed
+in this repository.
