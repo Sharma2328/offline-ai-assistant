@@ -1,0 +1,456 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "definitions": {
+    "BenchmarkConfig": {
+      "properties": {
+        "maxTokens": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "measuredReps": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "modelIds": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "preset": {
+          "type": "string"
+        },
+        "seed": {
+          "format": "int64",
+          "type": "integer"
+        },
+        "suiteId": {
+          "type": "string"
+        },
+        "temperature": {
+          "format": "float",
+          "type": "number"
+        },
+        "timeoutMs": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "warmupReps": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "maxTokens",
+        "measuredReps",
+        "modelIds",
+        "preset",
+        "seed",
+        "suiteId",
+        "temperature",
+        "timeoutMs",
+        "warmupReps"
+      ],
+      "type": "object"
+    },
+    "BenchmarkRun": {
+      "properties": {
+        "completed": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "config": {
+          "$ref": "#/definitions/RunConfig"
+        },
+        "createdAt": {
+          "type": "string"
+        },
+        "environment": true,
+        "error": {
+          "type": ["string", "null"]
+        },
+        "id": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string"
+        },
+        "total": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": ["completed", "config", "createdAt", "environment", "id", "status", "total"],
+      "type": "object"
+    },
+    "CaseResult": {
+      "properties": {
+        "caseId": {
+          "type": "string"
+        },
+        "category": {
+          "type": "string"
+        },
+        "error": {
+          "type": ["string", "null"]
+        },
+        "input": {
+          "type": "string"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "modelLoadTimeMs": {
+          "default": null,
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": ["integer", "null"]
+        },
+        "output": {
+          "type": "string"
+        },
+        "peakRamBytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": ["integer", "null"]
+        },
+        "repetition": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "runtimeVersion": {
+          "type": "string"
+        },
+        "score": {
+          "format": "double",
+          "type": "number"
+        },
+        "scorer": {
+          "default": "",
+          "type": "string"
+        },
+        "timing": {
+          "$ref": "#/definitions/GenerationTiming"
+        }
+      },
+      "required": [
+        "caseId",
+        "category",
+        "input",
+        "modelId",
+        "output",
+        "repetition",
+        "runtimeVersion",
+        "score",
+        "timing"
+      ],
+      "type": "object"
+    },
+    "GenerationTiming": {
+      "description": "Timing metrics for a completed generation (contract §8.2). `ttft_ms` is time-to-first-token.",
+      "properties": {
+        "outputTokens": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "tokensPerSecond": {
+          "format": "float",
+          "type": "number"
+        },
+        "totalMs": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "ttftMs": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": ["outputTokens", "tokensPerSecond", "totalMs", "ttftMs"],
+      "type": "object"
+    },
+    "ModelMetrics": {
+      "properties": {
+        "failureRate": {
+          "format": "double",
+          "type": "number"
+        },
+        "latencyMedianMs": {
+          "format": "double",
+          "type": "number"
+        },
+        "latencyP95Ms": {
+          "format": "double",
+          "type": "number"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "modelLoadTimeMs": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": ["integer", "null"]
+        },
+        "name": {
+          "type": "string"
+        },
+        "overall": {
+          "format": "double",
+          "type": ["number", "null"]
+        },
+        "peakRamBytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": ["integer", "null"]
+        },
+        "quality": {
+          "format": "double",
+          "type": "number"
+        },
+        "qualityByCategory": {
+          "additionalProperties": {
+            "format": "double",
+            "type": "number"
+          },
+          "type": "object"
+        },
+        "timeoutRate": {
+          "format": "double",
+          "type": "number"
+        },
+        "tokensPerSecondMean": {
+          "format": "double",
+          "type": "number"
+        },
+        "tokensPerSecondMedian": {
+          "format": "double",
+          "type": "number"
+        },
+        "tokensPerSecondStdDev": {
+          "format": "double",
+          "type": "number"
+        },
+        "ttftMedianMs": {
+          "format": "double",
+          "type": "number"
+        },
+        "unavailableMetrics": {
+          "items": {
+            "type": "string"
+          },
+          "type": "array"
+        },
+        "weights": {
+          "items": {
+            "format": "double",
+            "type": "number"
+          },
+          "maxItems": 4,
+          "minItems": 4,
+          "type": "array"
+        }
+      },
+      "required": [
+        "failureRate",
+        "latencyMedianMs",
+        "latencyP95Ms",
+        "modelId",
+        "name",
+        "quality",
+        "qualityByCategory",
+        "timeoutRate",
+        "tokensPerSecondMean",
+        "tokensPerSecondMedian",
+        "tokensPerSecondStdDev",
+        "ttftMedianMs",
+        "unavailableMetrics",
+        "weights"
+      ],
+      "type": "object"
+    },
+    "ModelSnapshot": {
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "profile": {
+          "$ref": "#/definitions/RuntimeProfile"
+        },
+        "sha256": {
+          "type": "string"
+        },
+        "sizeBytes": {
+          "format": "uint64",
+          "minimum": 0.0,
+          "type": "integer"
+        }
+      },
+      "required": ["id", "name", "profile", "sha256", "sizeBytes"],
+      "type": "object"
+    },
+    "RunConfig": {
+      "properties": {
+        "datasetChecksum": {
+          "type": "string"
+        },
+        "datasetVersion": {
+          "type": "string"
+        },
+        "models": {
+          "items": {
+            "$ref": "#/definitions/ModelSnapshot"
+          },
+          "type": "array"
+        },
+        "settings": {
+          "$ref": "#/definitions/BenchmarkConfig"
+        }
+      },
+      "required": ["datasetChecksum", "datasetVersion", "models", "settings"],
+      "type": "object"
+    },
+    "RuntimeEngine": {
+      "description": "Inference engine identifier. Ollama is a post-MVP (P1) adapter.",
+      "enum": ["llama.cpp", "ollama"],
+      "type": "string"
+    },
+    "RuntimeProfile": {
+      "description": "A per-model runtime binding (contract §8.1). The generation-sampling fields are packed into `runtime_profiles.generation_defaults_json` by the storage layer; the rest are columns.\n\nLives in the `inference` crate (not `storage`/`app-core`) because it is fundamentally a runtime concept and is shared by both the adapter contract and the model repository. It is re-exported from `app-core` so existing call sites are unaffected.",
+      "properties": {
+        "batchSize": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "contextLength": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "engine": {
+          "$ref": "#/definitions/RuntimeEngine"
+        },
+        "gpuLayers": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "id": {
+          "type": "string"
+        },
+        "maxTokens": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "modelId": {
+          "type": "string"
+        },
+        "repeatPenalty": {
+          "format": "float",
+          "type": "number"
+        },
+        "seed": {
+          "format": "int64",
+          "type": ["integer", "null"]
+        },
+        "temperature": {
+          "format": "float",
+          "type": "number"
+        },
+        "threads": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "topK": {
+          "format": "uint32",
+          "minimum": 0.0,
+          "type": "integer"
+        },
+        "topP": {
+          "format": "float",
+          "type": "number"
+        }
+      },
+      "required": [
+        "batchSize",
+        "contextLength",
+        "engine",
+        "gpuLayers",
+        "id",
+        "maxTokens",
+        "modelId",
+        "repeatPenalty",
+        "temperature",
+        "threads",
+        "topK",
+        "topP"
+      ],
+      "type": "object"
+    }
+  },
+  "properties": {
+    "bestByCategory": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "type": "object"
+    },
+    "bestOverall": {
+      "type": ["string", "null"]
+    },
+    "bestQuality": {
+      "type": ["string", "null"]
+    },
+    "cases": {
+      "items": {
+        "$ref": "#/definitions/CaseResult"
+      },
+      "type": "array"
+    },
+    "fastest": {
+      "type": ["string", "null"]
+    },
+    "models": {
+      "items": {
+        "$ref": "#/definitions/ModelMetrics"
+      },
+      "type": "array"
+    },
+    "mostMemoryEfficient": {
+      "type": ["string", "null"]
+    },
+    "preset": {
+      "type": "string"
+    },
+    "run": {
+      "$ref": "#/definitions/BenchmarkRun"
+    },
+    "schemaVersion": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": ["bestByCategory", "cases", "models", "preset", "run", "schemaVersion", "warnings"],
+  "title": "BenchmarkReport",
+  "type": "object"
+}
