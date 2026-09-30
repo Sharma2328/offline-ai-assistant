@@ -72,6 +72,24 @@ Native checks cover real generation, cancellation, embeddings, persisted chat,
 document retrieval, blocked external runtime sockets, and coding-runner isolation.
 Browser tests use a deterministic Tauri IPC fixture and exercise the UI separately.
 
+## Interface development
+
+`pnpm dev` opens the native app and serves the interface at `http://127.0.0.1:1420`.
+For the interface alone, run `pnpm --filter @offline-ai/desktop dev:vite`. Model
+loading, file pickers, and saved data require the native desktop app; a browser
+preview does not connect to the Tauri backend.
+
+The workspace includes light, dark, and system themes, reduced-motion support,
+and compact navigation for smaller windows. In Chat, use **History** to search
+or manage conversations and **Chat options** to choose documents or add assistant
+instructions. Starter prompts fill an editable draft; they never send automatically.
+The Models library can be searched by name, architecture, or quantization.
+
+Shared visual tokens and responsive layouts live in
+`apps/desktop/src/styles/globals.css`; reusable controls live in `packages/ui`.
+Browser checks cover the core workflows, keyboard interactions, responsive layouts,
+and automated accessibility checks in both light and dark themes.
+
 ## Privacy and storage
 
 The frontend has a restrictive Content Security Policy. Runtime children bind to

@@ -1,4 +1,5 @@
 import type { ReactElement } from "react";
+import { Check, Monitor, Moon, Sun } from "lucide-react";
 import {
   Button,
   Card,
@@ -37,10 +38,16 @@ export function SettingsPage(): ReactElement {
   const reduceMotion = motion === "reduce";
 
   return (
-    <section aria-labelledby="settings-heading" className="mx-auto w-full max-w-2xl space-y-6 p-8">
-      <h1 id="settings-heading" className="text-2xl font-semibold tracking-tight">
-        Settings
-      </h1>
+    <section aria-labelledby="settings-heading" className="workspace-page !max-w-4xl">
+      <header className="page-header">
+        <div>
+          <p className="page-eyebrow">Make yourself at home</p>
+          <h1 id="settings-heading" className="page-title">
+            Settings
+          </h1>
+          <p className="page-description">Your workspace, just the way you like it.</p>
+        </div>
+      </header>
 
       <Card>
         <CardHeader>
@@ -52,25 +59,51 @@ export function SettingsPage(): ReactElement {
             <div id="theme-label" className="mb-2 text-sm font-medium">
               Theme
             </div>
-            <div role="group" aria-labelledby="theme-label" className="flex gap-2">
+            <div role="group" aria-labelledby="theme-label" className="grid grid-cols-3 gap-3">
               {THEME_OPTIONS.map((option) => (
-                <Button
+                <button
                   key={option.value}
                   type="button"
-                  variant={theme === option.value ? "default" : "outline"}
-                  size="sm"
+                  className="theme-option"
                   aria-pressed={theme === option.value}
                   onClick={() => {
                     setTheme(option.value);
                   }}
                 >
-                  {option.label}
-                </Button>
+                  <span
+                    aria-hidden="true"
+                    className={`theme-preview ${option.value === "dark" ? "bg-[#252c27]" : option.value === "light" ? "bg-[#fcfbf8]" : "bg-[linear-gradient(110deg,#fcfbf8_50%,#252c27_50%)]"}`}
+                  >
+                    <span
+                      className={`w-1/4 border-r ${option.value === "dark" ? "border-white/10 bg-white/5" : "border-black/10 bg-black/5"}`}
+                    />
+                    <span className="flex-1 space-y-1.5 p-3">
+                      <span
+                        className={`block h-1.5 w-2/3 rounded-full ${option.value === "dark" ? "bg-white/25" : "bg-black/15"}`}
+                      />
+                      <span className="block h-1.5 w-1/2 rounded-full bg-[#76a18b]/40" />
+                      <span className="block h-3 w-4/5 rounded-sm bg-[#76a18b]/20" />
+                    </span>
+                  </span>
+                  <span className="flex w-full items-center gap-2">
+                    {option.value === "light" ? (
+                      <Sun className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : option.value === "dark" ? (
+                      <Moon className="h-3.5 w-3.5" aria-hidden="true" />
+                    ) : (
+                      <Monitor className="h-3.5 w-3.5" aria-hidden="true" />
+                    )}
+                    {option.label}
+                    {theme === option.value && (
+                      <Check className="ml-auto h-3.5 w-3.5 text-primary" aria-hidden="true" />
+                    )}
+                  </span>
+                </button>
               ))}
             </div>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-4">
             <div>
               <div className="text-sm font-medium">Reduce motion</div>
               <p className="text-sm text-muted-foreground">Minimize animations and transitions.</p>
@@ -113,7 +146,7 @@ function OfflineLockCard(): ReactElement {
         <CardDescription>Control whether the app may use the network.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <div className="text-sm font-medium">Offline lock</div>
             <p className="text-sm text-muted-foreground">

@@ -1,8 +1,11 @@
 import type { ReactElement } from "react";
+import { Gauge, Play } from "lucide-react";
+import { Link } from "react-router-dom";
 import {
   Button,
   Card,
   CardContent,
+  CardDescription,
   CardHeader,
   CardTitle,
   Table,
@@ -27,17 +30,23 @@ export function BenchmarksPage(): ReactElement {
   const bench = useBenchmarks();
   const report = bench.report.data;
   const running = bench.runs.data?.some((run) => run.status === "running") ?? false;
-  const inputClass = "mt-1 w-full rounded-md border bg-background px-3 py-2 text-sm";
+  const inputClass = "field-input mt-1.5";
   return (
-    <section aria-labelledby="benchmarks-heading" className="mx-auto max-w-6xl space-y-6 p-8">
-      <header>
-        <h1 id="benchmarks-heading" className="text-2xl font-semibold">
-          Benchmarks
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Compare local models using identical tasks and sampling settings. Runs stay on this
-          device.
-        </p>
+    <section aria-labelledby="benchmarks-heading" className="workspace-page">
+      <header className="page-header">
+        <div>
+          <p className="page-eyebrow">Find your best fit</p>
+          <h1 id="benchmarks-heading" className="page-title">
+            Benchmarks
+          </h1>
+          <p className="page-description">
+            A fair comparison, on your hardware. Discover how your models balance quality, speed,
+            and memory.
+          </p>
+        </div>
+        <span className="stat-icon">
+          <Gauge aria-hidden="true" />
+        </span>
       </header>
       {bench.error && (
         <p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">
@@ -47,6 +56,9 @@ export function BenchmarksPage(): ReactElement {
       <Card>
         <CardHeader>
           <CardTitle>Compare models</CardTitle>
+          <CardDescription>
+            Choose your models and a task. We’ll keep the conditions consistent.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -58,9 +70,9 @@ export function BenchmarksPage(): ReactElement {
           >
             <fieldset disabled={running || bench.create.isPending}>
               <legend className="mb-2 text-sm font-medium">Models</legend>
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-3">
                 {bench.models.data?.map((model) => (
-                  <label key={model.id} className="flex items-center gap-2 text-sm">
+                  <label key={model.id} className="model-choice">
                     <input
                       type="checkbox"
                       checked={bench.config.modelIds.includes(model.id)}
@@ -79,11 +91,17 @@ export function BenchmarksPage(): ReactElement {
               </div>
               {!bench.models.data?.length && (
                 <p className="text-sm text-muted-foreground">
-                  Import models in Models before creating a benchmark.
+                  <Link
+                    to="/models"
+                    className="font-medium text-primary underline underline-offset-4"
+                  >
+                    Import a model
+                  </Link>{" "}
+                  to set up your first benchmark.
                 </p>
               )}
             </fieldset>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid gap-4 sm:grid-cols-3">
               <label className="text-sm">
                 Suite
                 <select
@@ -129,7 +147,7 @@ export function BenchmarksPage(): ReactElement {
             </div>
             <details>
               <summary className="cursor-pointer text-sm">Generation settings</summary>
-              <div className="mt-3 grid grid-cols-4 gap-3">
+              <div className="mt-3 grid grid-cols-2 gap-3 lg:grid-cols-4">
                 <label className="text-sm">
                   Maximum tokens
                   <input
@@ -192,6 +210,7 @@ export function BenchmarksPage(): ReactElement {
             </details>
             <div className="flex items-center gap-4">
               <Button disabled={!bench.config.modelIds.length || running || bench.create.isPending}>
+                <Play aria-hidden="true" />
                 {bench.create.isPending ? "Starting…" : "Start benchmark"}
               </Button>
               <p className="text-xs text-muted-foreground">
@@ -281,7 +300,7 @@ export function BenchmarksPage(): ReactElement {
                 max={report.run.total || 1}
                 value={report.run.completed}
               />
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <p className="text-sm">
                   {report.run.completed} / {report.run.total} measured cases saved
                 </p>

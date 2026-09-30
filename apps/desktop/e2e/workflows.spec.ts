@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import axe from "axe-core";
 
 // UI contract fixture. Real GGUF execution is covered separately by Rust integration tests.
 test.beforeEach(async ({ page }) => {
@@ -53,6 +54,43 @@ test.beforeEach(async ({ page }) => {
       switch (command) {
         case "app_version":
           return "0.1.0";
+        case "system_inspect":
+          return {
+            hardware: {
+              os: "macOS",
+              arch: "aarch64",
+              cpuModel: "Apple M3",
+              logicalCores: 8,
+              totalMemoryBytes: 17179869184,
+              availableMemoryBytes: 8589934592,
+              availableDiskBytes: 250000000000,
+              gpus: [],
+              undetected: [],
+            },
+            capabilities: {
+              engine: "llama.cpp",
+              engineVersion: "local",
+              supportsSeed: true,
+              supportsGpuOffload: true,
+              supportsEmbeddings: true,
+              deterministicSampling: true,
+              maxContext: null,
+            },
+          };
+        case "storage_usage":
+          return {
+            path: "/local/workspace",
+            databaseBytes: 4096,
+            managedModelBytes: 0,
+            conversations: 0,
+            documents: 0,
+            benchmarkRuns: 0,
+            conversationBytes: 0,
+            indexBytes: 0,
+            benchmarkBytes: 0,
+          };
+        case "diagnostics_list":
+          return [];
         case "settings_get":
           return [{ key: args.key, value: args.key === "runtime_binary_path" ? "" : true }];
         case "settings_set":
@@ -323,9 +361,10 @@ test("chat streams, preserves stopped output, retains history, and shows sources
   await expect(page.getByText("Retrieved sources")).toBeVisible();
   await page.getByRole("link", { name: "Models", exact: true }).click();
   await page.getByRole("link", { name: "Chat", exact: true }).click();
+  await page.getByRole("button", { name: "History", exact: true }).click();
   await page.getByRole("button", { name: "Explain local inference", exact: true }).click();
   await expect(page.getByText("Assistant · stopped", { exact: false })).toBeVisible();
-  await page.screenshot({ path: "test-results/chat.png", fullPage: true });
+  await page.screenshot({ path: "test-results/chat.png", fullPage: true, animations: "disabled" });
   expect(external).toEqual([]);
 });
 
@@ -339,7 +378,11 @@ test("creates a collection, indexes a file, and inspects retrieved sources", asy
   await page.getByLabel("Search document passages").fill("When does the station open?");
   await page.getByRole("button", { name: "Find passages" }).click();
   await expect(page.getByText("The field station opens at 9 AM.")).toBeVisible();
-  await page.screenshot({ path: "test-results/documents.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results/documents.png",
+    fullPage: true,
+    animations: "disabled",
+  });
 });
 
 test("compares two models, changes score weights, and exports a report", async ({ page }) => {
@@ -357,7 +400,11 @@ test("compares two models, changes score weights, and exports a report", async (
       ),
     )
     .toBe(true);
-  await page.screenshot({ path: "test-results/benchmarks.png", fullPage: true });
+  await page.screenshot({
+    path: "test-results/benchmarks.png",
+    fullPage: true,
+    animations: "disabled",
+  });
 });
 
 test("summarizes locally into a new conversation while preserving the original", async ({
@@ -380,6 +427,163 @@ test("summarizes locally into a new conversation while preserving the original",
       exact: true,
     }),
   ).toBeVisible();
+  await page.getByRole("button", { name: "History", exact: true }).click();
   await page.getByRole("button", { name: "Explain local inference", exact: true }).click();
   await expect(page.getByRole("button", { name: "Regenerate", exact: true })).toBeVisible();
+});
+
+test("starter prompts stay editable, chat options apply, and history supports keyboard dismissal", async ({
+  page,
+}) => {
+  await page.goto("/");
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Skip to content" })).toBeFocused();
+  await page.keyboard.press("Enter");
+  await expect(page.locator("main")).toBeFocused();
+  await expect(page.locator("main h1")).toHaveText("Chat");
+  await page.getByRole("button", { name: /Find the right words/ }).click();
+  const message = page.getByRole("textbox", { name: "Message", exact: true });
+  await expect(message).toBeFocused();
+  await expect(message).toHaveValue(/Help me write/);
+  await expect(page.getByRole("button", { name: "Send message", exact: true })).toBeDisabled();
+  await page.getByRole("button", { name: "Chat options", exact: true }).click();
+  await page.getByText("System prompt", { exact: true }).click();
+  await page
+    .getByRole("textbox", { name: "System prompt", exact: true })
+    .fill("Keep answers concise.");
+  await page.getByRole("button", { name: "Close chat options" }).click();
+  await page.getByRole("button", { name: "History", exact: true }).click();
+  await expect(page.getByText("No conversations yet. Your chats will appear here.")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "History", exact: true })).toBeFocused();
+  await expect(page.getByRole("complementary", { name: "Conversations" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Load model", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Unload", exact: true })).toBeVisible();
+  await message.fill("A new thought");
+  await message.press("Shift+Enter");
+  await expect(message).toHaveValue("A new thought\n");
+  await message.press("Enter");
+  await expect(page.getByRole("button", { name: "Regenerate", exact: true })).toBeVisible();
+  await page.getByText("Conversation instructions and summary", { exact: true }).click();
+  await expect(page.getByText("Keep answers concise.", { exact: true })).toBeVisible();
+  await page.context().grantPermissions(["clipboard-read", "clipboard-write"]);
+  await page.getByRole("button", { name: "Copy", exact: true }).first().click();
+  await expect(page.getByRole("button", { name: "Copied", exact: true })).toBeVisible();
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toContain("A new thought");
+});
+
+test("model search filters the library and recovers from no results", async ({ page }) => {
+  await page.goto("/#/models");
+  const search = page.getByRole("textbox", { name: "Search models" });
+  await search.fill("Model Two");
+  await expect(page.getByRole("cell", { name: "Model Two", exact: true })).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Model One", exact: true })).toHaveCount(0);
+  await search.fill("not-a-model");
+  await expect(page.getByText(/No models match/)).toBeVisible();
+  await search.clear();
+  await expect(page.getByRole("cell", { name: "Model One", exact: true })).toBeVisible();
+});
+
+test("workspace remains usable in light, dark, and narrow layouts", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "What’s on your mind?" })).toBeVisible();
+  await page.screenshot({
+    path: "test-results/chat-welcome-light.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.getByRole("link", { name: "Settings", exact: true }).click();
+  await page.getByRole("button", { name: "Dark", exact: true }).click();
+  await expect(page.locator("html")).toHaveClass(/dark/);
+  await page.screenshot({
+    path: "test-results/settings-dark.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.getByRole("link", { name: "Chat", exact: true }).click();
+  await expect(page.getByRole("heading", { name: "What’s on your mind?" })).toBeVisible();
+  await page.screenshot({
+    path: "test-results/chat-welcome-dark.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.getByRole("button", { name: "Chat options", exact: true }).click();
+  await expect(page.getByRole("combobox", { name: "Document collection" })).toBeVisible();
+  await page.getByRole("button", { name: "Close chat options" }).click();
+  await page.screenshot({
+    path: "test-results/chat-mobile.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+  for (const [route, title] of [
+    ["/", "Chat"],
+    ["/models", "Models"],
+    ["/documents", "Documents"],
+    ["/benchmarks", "Benchmarks"],
+    ["/settings", "Settings"],
+  ]) {
+    await page.goto(`/#${route}`);
+    await expect(page.locator("main h1")).toHaveText(title!);
+    const overflow = await page.evaluate(() => ({
+      document: document.documentElement.scrollWidth > window.innerWidth,
+      main:
+        document.querySelector("main")!.scrollWidth > document.querySelector("main")!.clientWidth,
+    }));
+    expect(overflow, `Overflow on ${route}`).toEqual({ document: false, main: false });
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/#/onboarding");
+  await expect(page.getByText("Welcome", { exact: true })).toBeVisible();
+  await page.screenshot({
+    path: "test-results/onboarding.png",
+    fullPage: true,
+    animations: "disabled",
+  });
+});
+
+test("main screens meet automated accessibility checks in both themes", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  for (const theme of ["light", "dark"]) {
+    await page.goto("/#/settings");
+    await page
+      .getByRole("button", { name: theme === "light" ? "Light" : "Dark", exact: true })
+      .click();
+    await page.reload();
+    await expect(page.locator(".app-shell")).toHaveCSS(
+      "color",
+      theme === "dark" ? "rgb(236, 233, 228)" : "rgb(39, 48, 43)",
+    );
+    for (const [route, title] of [
+      ["/", "Chat"],
+      ["/models", "Models"],
+      ["/documents", "Documents"],
+      ["/benchmarks", "Benchmarks"],
+      ["/settings", "Settings"],
+    ]) {
+      await page.goto(`/#${route}`);
+      await expect(page.locator("main h1")).toHaveText(title!);
+      await page.addScriptTag({ content: axe.source });
+      const violations = await page.evaluate(async () => {
+        const result = await (window as unknown as { axe: typeof axe }).axe.run(document, {
+          runOnly: { type: "tag", values: ["wcag2a", "wcag2aa", "wcag21aa"] },
+        });
+        return result.violations.map((violation) => ({
+          id: violation.id,
+          nodes: violation.nodes.map((node) => ({
+            target: node.target,
+            reason: node.failureSummary,
+          })),
+        }));
+      });
+      expect(violations, `${theme} ${route}`).toEqual([]);
+      if (theme === "light")
+        await page.screenshot({
+          path: `test-results/review-${title?.toLowerCase()}.png`,
+          animations: "disabled",
+        });
+    }
+  }
 });

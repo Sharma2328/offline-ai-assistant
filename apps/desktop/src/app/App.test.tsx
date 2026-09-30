@@ -15,7 +15,7 @@ describe("App shell", () => {
 
   it("shows the Chat screen empty state on the index route", () => {
     render(<App />);
-    expect(screen.getByText(/no conversations yet/i)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "What’s on your mind?" })).toBeInTheDocument();
   });
 
   it("exposes a skip-to-content link for keyboard users", () => {

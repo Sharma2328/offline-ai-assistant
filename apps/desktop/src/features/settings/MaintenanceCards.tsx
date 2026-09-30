@@ -23,7 +23,7 @@ export function MaintenanceCards(): ReactElement {
           <p className="break-all font-mono text-xs">
             {maintenance.runtime.data || "Bundled runtime / system PATH"}
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -131,7 +131,7 @@ export function MaintenanceCards(): ReactElement {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
               size="sm"

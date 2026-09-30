@@ -1,21 +1,51 @@
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router-dom";
-import { Button, Card, CardContent, CardHeader, CardTitle } from "@offline-ai/ui";
+import {
+  Button,
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+  EmptyState,
+} from "@offline-ai/ui";
+import { FileText, FolderOpen, MessageSquare, Plus } from "lucide-react";
 import { useDocuments } from "./useDocuments";
 export function DocumentsPage(): ReactElement {
   const docs = useDocuments();
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const inputClass = "w-full rounded-md border bg-background px-3 py-2 text-sm";
+  const inputClass = "field-input";
   return (
-    <section aria-labelledby="documents-heading" className="mx-auto max-w-5xl space-y-6 p-8">
-      <header>
-        <h1 id="documents-heading" className="text-2xl font-semibold">
-          Documents
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Index your files locally, inspect matching passages, and ask questions in Chat.
-        </p>
+    <section aria-labelledby="documents-heading" className="workspace-page">
+      <header className="page-header">
+        <div>
+          <p className="page-eyebrow">Knowledge, kept close</p>
+          <h1 id="documents-heading" className="page-title">
+            Documents
+          </h1>
+          <p className="page-description">
+            Turn your files into a conversation. Find answers with sources you can trace.
+          </p>
+        </div>
+        <span className="rounded-lg border bg-card px-3 py-2 text-xs text-muted-foreground">
+          PDF · TXT · Markdown · DOCX
+        </span>
       </header>
+      <div className="grid gap-3 sm:grid-cols-3">
+        {[
+          { icon: FolderOpen, title: "1. Create a collection", text: "Give related files a home." },
+          { icon: FileText, title: "2. Add your documents", text: "Index their contents locally." },
+          { icon: MessageSquare, title: "3. Ask away", text: "Choose your collection in Chat." },
+        ].map(({ icon: Icon, title, text }) => (
+          <div key={title} className="flex items-start gap-3 rounded-xl border bg-card p-4">
+            <Icon className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+            <div>
+              <p className="text-xs font-medium">{title}</p>
+              <p className="mt-1 text-xs leading-5 text-muted-foreground">{text}</p>
+            </div>
+          </div>
+        ))}
+      </div>
       {docs.error && (
         <p role="alert" className="rounded border border-destructive p-3 text-sm text-destructive">
           {docs.error}
@@ -24,6 +54,9 @@ export function DocumentsPage(): ReactElement {
       <Card>
         <CardHeader>
           <CardTitle>Create a collection</CardTitle>
+          <CardDescription>
+            Organize a project, a topic, or anything you want to explore.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form
@@ -33,7 +66,7 @@ export function DocumentsPage(): ReactElement {
               docs.create.mutate();
             }}
           >
-            <label className="flex-1 space-y-1 text-sm">
+            <label className="min-w-[180px] flex-1 space-y-1.5 text-sm">
               Collection name
               <input
                 className={inputClass}
@@ -44,7 +77,7 @@ export function DocumentsPage(): ReactElement {
                 placeholder="Research notes"
               />
             </label>
-            <label className="flex-1 space-y-1 text-sm">
+            <label className="min-w-[180px] flex-1 space-y-1.5 text-sm">
               Embedding model
               <select
                 className={inputClass}
@@ -63,11 +96,12 @@ export function DocumentsPage(): ReactElement {
               </select>
             </label>
             <Button disabled={!docs.name.trim() || !docs.embeddingModel || docs.create.isPending}>
-              Create collection
+              <Plus aria-hidden="true" />
+              {docs.create.isPending ? "Creating…" : "Create collection"}
             </Button>
             <details className="w-full text-sm">
               <summary className="cursor-pointer">Index and retrieval settings</summary>
-              <div className="mt-3 grid grid-cols-3 gap-3">
+              <div className="mt-3 grid gap-3 sm:grid-cols-3">
                 <label>
                   Chunk tokens
                   <input
@@ -125,11 +159,15 @@ export function DocumentsPage(): ReactElement {
       </Card>
       {docs.collections.isLoading && <p role="status">Loading collections…</p>}
       {docs.collections.isError && <p role="alert">Could not load collections.</p>}
-      {!docs.collections.isLoading && !docs.collections.data?.length && (
-        <p className="py-8 text-center text-muted-foreground">
-          No documents indexed. Create a collection to get started.
-        </p>
-      )}
+      {!docs.collections.isLoading &&
+        !docs.collections.isError &&
+        !docs.collections.data?.length && (
+          <EmptyState
+            icon={FolderOpen}
+            title="Your knowledge starts here"
+            description="Create your first collection above, then add a few files. Your original documents always stay where they are."
+          />
+        )}
       {!!docs.collections.data?.length && (
         <label className="block space-y-2 text-sm">
           Collection
@@ -154,7 +192,7 @@ export function DocumentsPage(): ReactElement {
       )}
       {docs.selected && (
         <>
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <Button
               disabled={docs.ingest.isPending}
               onClick={() => {
@@ -215,11 +253,11 @@ export function DocumentsPage(): ReactElement {
           ) : docs.documents.isError ? (
             <p role="alert">Could not load documents.</p>
           ) : (
-            <ul className="divide-y rounded border">
+            <ul className="divide-y rounded-xl border bg-card">
               {docs.documents.data?.map((document) => (
                 <li key={document.id} className="flex items-center justify-between gap-4 p-4">
-                  <div>
-                    <p className="font-medium">{document.name}</p>
+                  <div className="min-w-0">
+                    <p className="break-words font-medium">{document.name}</p>
                     <p className="text-xs text-muted-foreground">
                       {document.status} · {document.chunkCount} chunks
                     </p>
@@ -240,7 +278,7 @@ export function DocumentsPage(): ReactElement {
             </ul>
           )}
           <form
-            className="flex gap-3"
+            className="flex flex-wrap gap-3 sm:flex-nowrap"
             onSubmit={(event) => {
               event.preventDefault();
               docs.search.mutate();
